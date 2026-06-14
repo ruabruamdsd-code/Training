@@ -1,0 +1,1460 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>เป้าหมายการฝึกอบรม</title>
+    <link rel="apple-touch-icon" href="apple-touch-icon.png">
+    <link rel="icon" type="image/png" href="apple-touch-icon.png">
+    <!-- Tailwind CSS สำหรับตกแต่ง -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome สำหรับไอคอน -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Chart.js สำหรับวาดกราฟ -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- SheetJS (xlsx-js-style) สำหรับ Import/Export Excel พร้อมรองรับการตกแต่งสไตล์ -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
+    
+    <style>
+        body { font-family: 'Sarabun', sans-serif; }
+        .hidden-safely { display: none !important; }
+
+        /* การตั้งค่าสำหรับการพิมพ์ (Print Styles) */
+        @media print {
+            .no-print { display: none !important; }
+            body { background-color: white !important; }
+            
+            /* บังคับให้แสดงสีพื้นหลังเมื่อพิมพ์ */
+            * {
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+
+            /* ปรับ Layout ให้เหมาะกับกระดาษ A4 */
+            .print-block { display: block !important; }
+            .print-w-full { width: 100% !important; max-width: 100% !important; margin-bottom: 20px; }
+            .print-grid-4 { 
+                display: grid !important; 
+                grid-template-columns: repeat(4, minmax(0, 1fr)) !important; 
+                gap: 1rem !important; 
+            }
+            .print-avoid-break { page-break-inside: avoid; }
+            
+            /* ลดขนาดความสูงและช่องว่างเมื่อพิมพ์ */
+            .min-h-screen { min-height: auto !important; padding: 0 !important; }
+            .shadow-sm { box-shadow: none !important; border: 1px solid #e2e8f0 !important; }
+        }
+
+        /* AI Markdown styling */
+        .ai-content ul { list-style-type: disc; padding-left: 1.5rem; margin-bottom: 1rem; }
+        .ai-content p { margin-bottom: 0.75rem; }
+        .ai-content strong { color: #4c1d95; font-weight: 600; }
+        .ai-content br { margin-bottom: 0.5rem; }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800">
+
+    <div class="min-h-screen p-4 md:p-6">
+        <div class="max-w-[1400px] mx-auto space-y-6 print-w-full">
+            
+            <!-- Header Section -->
+            <div class="flex flex-col xl:flex-row xl:items-center justify-between gap-4">
+                <div>
+                    <h1 class="text-2xl font-bold text-slate-900 flex items-center gap-2">
+                        <i class="fa-solid fa-chart-simple text-blue-600"></i>
+                        เป้าหมายการฝึกอบรม
+                    </h1>
+                    <p class="text-slate-500 mt-1 text-sm">ฝ่ายพัฒนาฝีมือแรงงาน  สำนักงานพัฒนาฝีมือแรงงานลพบุรี</p>
+                </div>
+                
+                <div class="flex flex-wrap gap-2 w-full xl:w-auto no-print justify-start xl:justify-end items-center">
+                    <!-- Search Box -->
+                    <div class="relative w-full sm:w-64">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <i class="fa-solid fa-search text-slate-400"></i>
+                        </div>
+                        <input
+                            type="text"
+                            id="searchInput"
+                            placeholder="ค้นหา โครงการ, กิจกรรม, รุ่น..."
+                            class="block w-full pl-10 pr-3 py-2 border border-slate-300 rounded-lg text-sm leading-5 bg-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                    </div>
+                    <!-- Input ไฟล์ Excel ที่ซ่อนไว้ -->
+                    <input type="file" id="excelFileInput" accept=".xlsx, .xls" class="hidden" onchange="handleExcelUpload(event)">
+                    
+                    <!-- ปุ่มนำเข้า Excel -->
+                    <button 
+                        onclick="document.getElementById('excelFileInput').click()"
+                        class="hidden flex items-center justify-center gap-1.5 bg-emerald-600 text-white px-3 py-2 rounded-lg hover:bg-emerald-700 transition-colors shadow-sm text-sm"
+                    >
+                        <i class="fa-solid fa-file-excel"></i> นำเข้า
+                    </button>
+
+                    <!-- ปุ่มส่งออก Excel -->
+                    <button 
+                        onclick="exportToExcel()"
+                        class="flex items-center justify-center gap-1.5 bg-slate-600 text-white px-3 py-2 rounded-lg hover:bg-slate-700 transition-colors shadow-sm text-sm"
+                    >
+                        <i class="fa-solid fa-file-export"></i> ส่งออก
+                    </button>
+
+                    <!-- AI Analysis Button -->
+                    <button 
+                        onclick="window.generateAiSummary()"
+                        class="flex items-center justify-center gap-1.5 bg-purple-600 text-white px-3 py-2 rounded-lg hover:bg-purple-700 transition-colors shadow-sm text-sm border border-purple-700"
+                    >
+                        ✨ AI วิเคราะห์
+                    </button>
+
+                    <!-- AI Q&A Button -->
+                    <button 
+                        onclick="window.openAiQnAModal()"
+                        class="flex items-center justify-center gap-1.5 bg-pink-600 text-white px-3 py-2 rounded-lg hover:bg-pink-700 transition-colors shadow-sm text-sm border border-pink-700"
+                    >
+                        <i class="fa-regular fa-comment-dots"></i> ถามคำถาม AI
+                    </button>
+
+                    <!-- Print Button -->
+                    <button 
+                        onclick="window.print()"
+                        class="flex items-center justify-center gap-1.5 bg-white border border-slate-300 text-slate-700 px-3 py-2 rounded-lg hover:bg-slate-50 transition-colors shadow-sm text-sm"
+                    >
+                        <i class="fa-solid fa-print"></i> พิมพ์
+                    </button>
+                    <!-- Add Project Button -->
+                    <button 
+                        onclick="openModal('addProject')"
+                        class="flex items-center justify-center gap-1.5 bg-blue-600 text-white px-3 py-2 rounded-lg hover:bg-blue-700 transition-colors shadow-sm text-sm"
+                    >
+                        <i class="fa-solid fa-plus"></i> เพิ่มโครงการ
+                    </button>
+                </div>
+            </div>
+
+            <!-- แบ่งเลย์เอาต์หน้าจอเป็น 2 คอลัมน์ -->
+            <div class="print-block grid grid-cols-1 xl:grid-cols-12 gap-6 items-start">
+                
+                <!-- ฝั่งซ้าย: เนื้อหาหลัก -->
+                <div class="xl:col-span-8 space-y-6 print-w-full">
+                    <!-- KPI Summary Cards -->
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 print-grid-4" id="kpiContainer">
+                        <!-- KPI cards will be rendered here -->
+                    </div>
+
+                    <!-- เพิ่มส่วนจัดอันดับหลักสูตร -->
+                    <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden no-print">
+                        <div class="p-4 bg-slate-100 border-b border-slate-200 font-semibold text-slate-700 flex justify-between items-center">
+                            <span><i class="fa-solid fa-trophy text-amber-500 mr-2"></i> อันดับหลักสูตรที่เปิดอบรมมากที่สุด</span>
+                        </div>
+                        <div class="p-4 bg-slate-50/50">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-3" id="courseRankingContainer">
+                                <div class="text-center text-slate-500 col-span-full">กำลังโหลดข้อมูล...</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Main Content: Hierarchical List -->
+                    <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                        <div class="p-4 bg-slate-100 border-b border-slate-200 font-semibold text-slate-700 flex justify-between items-center">
+                            <span>รายการโครงการ (Projects)</span>
+                            <span id="projectCountBadge" class="text-sm font-normal bg-blue-100 text-blue-700 px-3 py-1 rounded-full">
+                                กำลังโหลดข้อมูล...
+                            </span>
+                        </div>
+
+                        <div class="divide-y divide-slate-100" id="projectListContainer">
+                            <div class="p-12 text-center text-slate-500">
+                                <i class="fa-solid fa-spinner fa-spin text-3xl text-blue-500 mb-4"></i>
+                                <p>กำลังเชื่อมต่อฐานข้อมูล...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ฝั่งขวา: Sidebar สรุปกราฟ -->
+                <div class="xl:col-span-4 space-y-6 sticky top-6 print-w-full print-avoid-break">
+                    <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                        <h3 class="font-bold text-slate-800 text-lg mb-5 text-center border-b border-slate-100 pb-4">สถานะแยกรายไตรมาส</h3>
+                        
+                        <!-- แถบสถานะความคืบหน้ารวม -->
+                        <div id="globalProgressContainer"></div>
+
+                        <!-- 3 Charts Grid -->
+                        <div class="grid grid-cols-2 gap-6 mt-6 print-grid-4">
+                            <!-- Q1-Q2 (รวมกันเต็มความกว้าง) -->
+                            <div class="col-span-2 text-center flex flex-col items-center print-avoid-break">
+                                <span class="bg-indigo-50 text-indigo-700 text-xs font-bold px-3 py-1 rounded-full mb-3">ไตรมาส 1-2</span>
+                                <div class="relative w-32 h-32"><canvas id="chartQ1_2"></canvas></div>
+                                <div class="text-xs text-slate-600 font-medium mt-3 leading-relaxed" id="textQ1_2"></div>
+                            </div>
+                            <!-- Q3 -->
+                            <div class="text-center flex flex-col items-center print-avoid-break">
+                                <span class="bg-indigo-50 text-indigo-700 text-xs font-bold px-3 py-1 rounded-full mb-3">ไตรมาส 3</span>
+                                <div class="relative w-28 h-28"><canvas id="chartQ3"></canvas></div>
+                                <div class="text-xs text-slate-600 font-medium mt-3 leading-relaxed" id="textQ3"></div>
+                            </div>
+                            <!-- Q4 -->
+                            <div class="text-center flex flex-col items-center print-avoid-break">
+                                <span class="bg-indigo-50 text-indigo-700 text-xs font-bold px-3 py-1 rounded-full mb-3">ไตรมาส 4</span>
+                                <div class="relative w-28 h-28"><canvas id="chartQ4"></canvas></div>
+                                <div class="text-xs text-slate-600 font-medium mt-3 leading-relaxed" id="textQ4"></div>
+                            </div>
+                        </div>
+
+                        <!-- คำอธิบายกราฟ (Legend & Details) -->
+                        <div class="flex justify-center gap-4 mt-6 border-t border-slate-100 pt-4 text-xs">
+                            <div class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-emerald-500"></span><span class="text-slate-600">เสร็จสิ้น</span></div>
+                            <div class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-blue-500"></span><span class="text-slate-600">กำลังดำเนินการ</span></div>
+                            <div class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-slate-200"></span><span class="text-slate-600">รอเปิดอบรม</span></div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Form (Hidden by default) -->
+    <div id="formModal" class="hidden-safely no-print fixed inset-0 bg-slate-900/40 z-50 flex items-center justify-center p-4 backdrop-blur-sm overflow-y-auto">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-lg overflow-hidden transform transition-all my-8">
+            <div class="flex justify-between items-center p-4 border-b border-slate-100 bg-slate-50">
+                <h3 id="modalTitle" class="text-lg font-bold text-slate-800">หัวข้อ</h3>
+                <button onclick="closeModal()" class="p-1 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-md transition-colors">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+            
+            <form id="dataForm" class="p-5 space-y-4">
+                <input type="hidden" id="formType">
+                <input type="hidden" id="targetProjectId">
+                <input type="hidden" id="targetMainActivityId">
+                <input type="hidden" id="targetSubActivityId">
+                <input type="hidden" id="targetCourseId">
+
+                <!-- Dynamic inputs will be inserted here by JS -->
+                <div id="modalBody" class="space-y-4"></div>
+
+                <div class="pt-4 flex justify-end gap-2 border-t border-slate-100 mt-6">
+                    <button type="button" onclick="closeModal()" class="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg transition-colors">
+                        ยกเลิก
+                    </button>
+                    <button type="submit" id="saveBtn" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2">
+                        บันทึกข้อมูล
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- AI Feature Modal (Hidden by default) -->
+    <div id="aiModal" class="hidden-safely no-print fixed inset-0 bg-slate-900/60 z-[60] flex items-center justify-center p-4 backdrop-blur-sm overflow-y-auto">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-2xl overflow-hidden transform transition-all my-8 border-t-4 border-purple-600">
+            <div class="flex justify-between items-center p-4 border-b border-slate-100 bg-purple-50">
+                <h3 id="aiModalTitle" class="text-lg font-bold text-purple-800 flex items-center gap-2">
+                    ✨ ผู้ช่วย AI ของคุณ
+                </h3>
+                <button onclick="closeAiModal()" class="p-1 text-purple-400 hover:text-purple-700 hover:bg-purple-200 rounded-md transition-colors">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+            
+            <div id="aiModalBody" class="p-6 ai-content text-slate-700">
+                <!-- AI content inserted here -->
+                <div class="text-center py-8">
+                    <i class="fa-solid fa-sparkles fa-spin text-4xl text-purple-400 mb-4"></i>
+                    <p class="text-purple-600 font-medium">กำลังประมวลผลด้วย 9arm AI...</p>
+                </div>
+            </div>
+
+            <div class="p-4 bg-slate-50 border-t border-slate-100 flex justify-end">
+                <button onclick="closeAiModal()" class="px-4 py-2 text-slate-600 hover:bg-slate-200 rounded-lg transition-colors font-medium">
+                    ปิดหน้าต่าง
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Firebase SDK & Logic -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
+        import { 
+            getFirestore, collection, onSnapshot, addDoc, updateDoc, doc, deleteDoc
+        } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-auth.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyAWXcS3UGqNLzFsNk0PgCTIveeLIkSOYTs",
+            authDomain: "edoblock-51e6c.firebaseapp.com",
+            projectId: "edoblock-51e6c",
+            storageBucket: "edoblock-51e6c.firebasestorage.app",
+            messagingSenderId: "426632152384",
+            appId: "1:426632152384:web:73d4c59491c289f206a6a5",
+            measurementId: "G-60F8TZ1NHM"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        const getProjectsCol = () => collection(db, 'artifacts', appId, 'public', 'data', 'projects_v2'); 
+        const getProjectDoc = (pId) => doc(db, 'artifacts', appId, 'public', 'data', 'projects_v2', pId);
+
+        let appData = [];
+        let searchTerm = '';
+        let expandedProjects = new Set();
+        let expandedMainActivities = new Set();
+        let expandedSubActivities = new Set();
+        let currentUser = null;
+        let isListenerInit = false;
+        
+        let chartInstances = { '1-2': null, '3': null, '4': null };
+
+        async function initAuth() {
+            try {
+                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                    try {
+                        await signInWithCustomToken(auth, __initial_auth_token);
+                    } catch (e) {
+                        await signInAnonymously(auth);
+                    }
+                } else {
+                    await signInAnonymously(auth);
+                }
+            } catch (error) {
+                console.error("Auth init error:", error);
+            }
+        }
+
+        onAuthStateChanged(auth, (user) => {
+            currentUser = user;
+            if (user) initDBListener();
+        });
+
+        initAuth();
+
+        function initDBListener() {
+            if (isListenerInit || !currentUser) return;
+            isListenerInit = true;
+            
+            onSnapshot(getProjectsCol(), (snapshot) => {
+                appData = snapshot.docs.map(doc => ({
+                    id: doc.id,
+                    projectName: doc.data().projectName || 'ไม่มีชื่อโครงการ',
+                    mainActivities: doc.data().mainActivities || [],
+                    createdAt: doc.data().createdAt || 0 // ดึงเวลาที่สร้างมาด้วย
+                }));
+                
+                // เรียงลำดับโครงการจากเก่าไปใหม่ (ข้อมูลที่เพิ่มล่าสุดจะไปอยู่ท้ายสุด)
+                appData.sort((a, b) => a.createdAt - b.createdAt);
+                
+                if (expandedProjects.size === 0 && appData.length > 0) {
+                    appData.forEach(p => {
+                        expandedProjects.add(p.id);
+                        p.mainActivities.forEach(ma => {
+                            expandedMainActivities.add(ma.id);
+                            (ma.subActivities || []).forEach(sa => expandedSubActivities.add(sa.id));
+                        });
+                    });
+                }
+                renderUI();
+            }, (error) => {
+                document.getElementById('projectListContainer').innerHTML = `<div class="p-8 text-center text-red-500">ไม่สามารถเชื่อมต่อฐานข้อมูลได้: ${error.message}</div>`;
+            });
+        }
+
+        document.getElementById('searchInput').addEventListener('input', (e) => {
+            searchTerm = e.target.value.toLowerCase();
+            renderUI();
+        });
+
+        function getFilteredData() {
+            if (!searchTerm.trim()) return appData;
+            
+            return appData.map(project => {
+                const projectMatch = project.projectName.toLowerCase().includes(searchTerm);
+                
+                const filteredMainActivities = project.mainActivities.map(mainAct => {
+                    const mainMatch = mainAct.mainActivityName.toLowerCase().includes(searchTerm);
+                    
+                    const filteredSubActivities = (mainAct.subActivities || []).map(subAct => {
+                        const subMatch = subAct.subActivityName.toLowerCase().includes(searchTerm);
+                        const filteredCourses = (subAct.courses || []).filter(c => 
+                            c.courseName.toLowerCase().includes(searchTerm) ||
+                            c.courseCode.toLowerCase().includes(searchTerm) ||
+                            c.responsiblePerson.toLowerCase().includes(searchTerm)
+                        );
+
+                        if (subMatch || filteredCourses.length > 0 || mainMatch || projectMatch) {
+                            return { ...subAct, courses: filteredCourses.length > 0 ? filteredCourses : (subAct.courses || []) };
+                        }
+                        return null;
+                    }).filter(Boolean);
+
+                    if (mainMatch || filteredSubActivities.length > 0 || projectMatch) {
+                        return { ...mainAct, subActivities: filteredSubActivities };
+                    }
+                    return null;
+                }).filter(Boolean);
+
+                if (projectMatch || filteredMainActivities.length > 0) {
+                    return { ...project, mainActivities: filteredMainActivities };
+                }
+                return null;
+            }).filter(Boolean);
+        }
+
+        function renderUI() {
+            const filteredData = getFilteredData();
+            
+            let tMainAct = 0, tSubAct = 0, tCour = 0;
+            let totalTrainees = 0;
+            let statusCounts = { done: 0, active: 0, pending: 0 };
+            let quarterCounts = {
+                '1-2': { courses: 0, trainees: 0, done: 0, active: 0, pending: 0 },
+                '3': { courses: 0, trainees: 0, done: 0, active: 0, pending: 0 },
+                '4': { courses: 0, trainees: 0, done: 0, active: 0, pending: 0 }
+            };
+            let courseRanking = {};
+
+            appData.forEach(p => {
+                tMainAct += p.mainActivities.length;
+                p.mainActivities.forEach(ma => {
+                    tSubAct += (ma.subActivities || []).length;
+                    (ma.subActivities || []).forEach(sa => {
+                        tCour += (sa.courses || []).length;
+                        (sa.courses || []).forEach(c => {
+                            let traineesCount = c.hasOwnProperty('trainees') ? parseInt(c.trainees) || 0 : 20;
+                            totalTrainees += traineesCount;
+                            
+                            let q = c.quarter || '1-2';
+                            if (q === '1' || q === '2') q = '1-2';
+                            
+                            quarterCounts[q].courses++;
+                            quarterCounts[q].trainees += traineesCount;
+                            
+                            if(c.status === 'เสร็จสิ้น') {
+                                statusCounts.done++;
+                                quarterCounts[q].done++;
+                            } else if(c.status === 'กำลังดำเนินการ') {
+                                statusCounts.active++;
+                                quarterCounts[q].active++;
+                            } else {
+                                statusCounts.pending++;
+                                quarterCounts[q].pending++;
+                            }
+
+                            let baseName = c.courseName.replace(/\s*\(รุ่นที่.*?\)/g, '').trim();
+                            if (!courseRanking[baseName]) courseRanking[baseName] = 0;
+                            courseRanking[baseName]++;
+                        });
+                    });
+                });
+            });
+
+            let openedCourses = statusCounts.done + statusCounts.active;
+
+            document.getElementById('kpiContainer').innerHTML = `
+                ${createKpiCard('โครงการทั้งหมด', appData.length, 'fa-folder-open text-blue-500')}
+                ${createKpiCard('กิจกรรมหลัก', tMainAct, 'fa-briefcase text-emerald-500')}
+                ${createKpiCard('เปิดแล้ว / ทั้งหมด (รุ่น)', '<span class="text-blue-600">' + openedCourses + '</span><span class="text-slate-400 text-sm font-normal"> / ' + tCour + '</span>', 'fa-layer-group text-amber-500')}
+                ${createKpiCard('จำนวนผู้เข้ารับการฝึกทั้งหมด (คน)', totalTrainees, 'fa-users text-purple-500')}
+            `;
+
+            updateDashboardCharts(openedCourses, tCour, quarterCounts);
+
+            let sortedCourses = Object.keys(courseRanking).map(name => ({name, count: courseRanking[name]})).sort((a,b) => b.count - a.count);
+            let rankingHtml = '';
+            sortedCourses.slice(0, 6).forEach((item, index) => {
+                let rankColor = index === 0 ? 'bg-amber-100 text-amber-600' : index === 1 ? 'bg-slate-200 text-slate-600' : index === 2 ? 'bg-orange-100 text-orange-700' : 'bg-blue-50 text-blue-600';
+                rankingHtml += `
+                    <div class="flex items-center justify-between p-3 border border-slate-200 rounded-lg shadow-sm bg-white">
+                        <div class="flex items-center gap-3 overflow-hidden">
+                            <span class="w-6 h-6 flex-shrink-0 flex items-center justify-center rounded-full ${rankColor} font-bold text-xs">${index + 1}</span>
+                            <span class="text-sm font-medium text-slate-700 truncate" title="${item.name}">${item.name}</span>
+                        </div>
+                        <span class="text-sm font-bold text-blue-700 flex-shrink-0 ml-2">${item.count} <span class="text-[10px] text-slate-400 font-normal">รุ่น</span></span>
+                    </div>
+                `;
+            });
+            if(sortedCourses.length === 0) rankingHtml = '<div class="col-span-full text-center text-sm text-slate-400 py-4">ยังไม่มีข้อมูลหลักสูตร</div>';
+            document.getElementById('courseRankingContainer').innerHTML = rankingHtml;
+
+            document.getElementById('projectCountBadge').innerText = `พบ ${filteredData.length} โครงการ`;
+            const listContainer = document.getElementById('projectListContainer');
+
+            if (filteredData.length === 0) {
+                listContainer.innerHTML = `<div class="p-12 text-center text-slate-500">ไม่พบข้อมูล</div>`;
+                return;
+            }
+
+            let htmlStr = '';
+            filteredData.forEach(project => {
+                const isPExp = expandedProjects.has(project.id);
+                htmlStr += `
+                    <div class="p-2 border-b border-slate-100 last:border-0 print-avoid-break">
+                        <!-- โครงการ -->
+                        <div class="flex items-center gap-2 p-3 bg-blue-50 hover:bg-blue-100 rounded-lg cursor-pointer transition-colors group" onclick="toggleProject('${project.id}')">
+                            <i class="fa-solid ${isPExp ? 'fa-chevron-down' : 'fa-chevron-right'} text-blue-400 w-4 no-print"></i>
+                            <i class="fa-solid fa-folder-open text-xl text-blue-700 flex-shrink-0"></i>
+                            <h2 class="text-lg font-bold text-slate-800 leading-tight">${project.projectName}</h2>
+                            
+                            <div class="ml-auto flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity no-print">
+                                <button onclick="event.stopPropagation(); openModal('editProject', '${project.id}')" class="text-blue-500 hover:text-blue-700 p-1.5 rounded hover:bg-blue-200 transition-colors" title="แก้ไขโครงการ"><i class="fa-solid fa-pen"></i></button>
+                                <button onclick="event.stopPropagation(); deleteItem('project', '${project.id}')" class="text-red-400 hover:text-red-600 p-1.5 rounded hover:bg-red-100 transition-colors mr-1" title="ลบโครงการ"><i class="fa-solid fa-trash"></i></button>
+                                <button onclick="event.stopPropagation(); openModal('addMainActivity', '${project.id}')" class="flex items-center gap-1 text-xs bg-emerald-50 text-emerald-700 hover:bg-emerald-200 px-2.5 py-1.5 rounded-md border border-emerald-200 shadow-sm transition-colors">
+                                    <i class="fa-solid fa-plus"></i> เพิ่มกิจกรรมหลัก
+                                </button>
+                            </div>
+                        </div>
+
+                        ${isPExp ? `
+                        <div class="ml-6 mt-2 border-l-2 border-emerald-200 pl-4 space-y-3 pb-2">
+                            ${project.mainActivities.length === 0 ? `<div class="p-3 text-sm text-slate-400 border border-dashed border-slate-200 rounded-lg">ยังไม่มีกิจกรรมหลัก</div>` : ''}
+                            
+                            ${project.mainActivities.map(mainAct => {
+                                const isMExp = expandedMainActivities.has(mainAct.id);
+                                const subActs = mainAct.subActivities || [];
+                                return `
+                                <div class="bg-white rounded-lg border border-slate-200 shadow-sm print-avoid-break">
+                                    <!-- กิจกรรมหลัก -->
+                                    <div class="flex items-center gap-2 p-3 bg-emerald-50 hover:bg-emerald-100 rounded-t-lg cursor-pointer transition-colors group" onclick="toggleMainActivity('${mainAct.id}')">
+                                        <i class="fa-solid ${isMExp ? 'fa-chevron-down' : 'fa-chevron-right'} text-emerald-500 w-4 no-print"></i>
+                                        <i class="fa-solid fa-briefcase text-emerald-700 flex-shrink-0"></i>
+                                        <h3 class="font-semibold text-slate-800">[กิจกรรมหลัก] ${mainAct.mainActivityName}</h3>
+                                        
+                                        <div class="ml-auto flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity no-print">
+                                            <button onclick="event.stopPropagation(); openModal('editMainActivity', '${project.id}', '${mainAct.id}')" class="text-emerald-600 hover:text-emerald-800 p-1.5 rounded hover:bg-emerald-200 transition-colors" title="แก้ไขกิจกรรมหลัก"><i class="fa-solid fa-pen"></i></button>
+                                            <button onclick="event.stopPropagation(); deleteItem('mainActivity', '${project.id}', '${mainAct.id}')" class="text-red-400 hover:text-red-600 p-1.5 rounded hover:bg-red-100 transition-colors mr-1" title="ลบกิจกรรมหลัก"><i class="fa-solid fa-trash"></i></button>
+                                            <button onclick="event.stopPropagation(); openModal('addSubActivity', '${project.id}', '${mainAct.id}')" class="flex items-center gap-1 text-xs bg-amber-50 text-amber-700 hover:bg-amber-200 px-2.5 py-1.5 rounded-md border border-amber-200 shadow-sm transition-colors">
+                                                <i class="fa-solid fa-plus"></i> เพิ่มกิจกรรมย่อย
+                                            </button>
+                                        </div>
+                                    </div>
+                                    
+                                    ${isMExp ? `
+                                    <div class="p-3 bg-slate-50 border-t border-slate-200 space-y-3 rounded-b-lg">
+                                        ${subActs.length === 0 ? `<div class="text-sm text-slate-400 italic">ยังไม่มีกิจกรรมย่อย</div>` : ''}
+                                        
+                                        ${subActs.map(subAct => {
+                                            const isSExp = expandedSubActivities.has(subAct.id);
+                                            const courses = subAct.courses || [];
+                                            return `
+                                            <div class="bg-white border border-slate-200 rounded-md overflow-hidden print-avoid-break">
+                                                <!-- กิจกรรมย่อย -->
+                                                <div class="flex items-center gap-2 p-2 px-3 bg-amber-50 hover:bg-amber-100 cursor-pointer transition-colors group" onclick="toggleSubActivity('${subAct.id}')">
+                                                    <i class="fa-solid ${isSExp ? 'fa-chevron-down' : 'fa-chevron-right'} text-amber-500 w-4 text-xs no-print"></i>
+                                                    <i class="fa-solid fa-list-check text-amber-600 flex-shrink-0"></i>
+                                                    <h4 class="font-medium text-slate-700 text-sm">[กิจกรรมย่อย] ${subAct.subActivityName}</h4>
+                                                    
+                                                    <div class="ml-auto flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity no-print">
+                                                        <button onclick="event.stopPropagation(); openModal('editSubActivity', '${project.id}', '${mainAct.id}', '${subAct.id}')" class="text-amber-600 hover:text-amber-800 p-1.5 rounded hover:bg-amber-200 transition-colors" title="แก้ไขกิจกรรมย่อย"><i class="fa-solid fa-pen text-xs"></i></button>
+                                                        <button onclick="event.stopPropagation(); deleteItem('subActivity', '${project.id}', '${mainAct.id}', '${subAct.id}')" class="text-red-400 hover:text-red-600 p-1.5 rounded hover:bg-red-100 transition-colors mr-1" title="ลบกิจกรรมย่อย"><i class="fa-solid fa-trash text-xs"></i></button>
+                                                        
+
+                                                        <button onclick="event.stopPropagation(); openAiCourseSuggestModal('${project.id}', '${mainAct.id}', '${subAct.id}', '${subAct.subActivityName}')" class="flex items-center gap-1 text-[11px] bg-purple-50 text-purple-700 hover:bg-purple-100 px-2 py-1 rounded border border-purple-200 transition-colors mr-1">
+                                                            <i class="fa-solid fa-sparkles"></i> AI ช่วยคิดหลักสูตร
+                                                        </button>
+
+                                                        <button onclick="event.stopPropagation(); openModal('addCourse', '${project.id}', '${mainAct.id}', '${subAct.id}')" class="flex items-center gap-1 text-[11px] bg-white text-slate-700 hover:bg-slate-100 px-2 py-1 rounded border border-slate-300 transition-colors">
+                                                            <i class="fa-solid fa-plus"></i> เพิ่มรุ่น/หลักสูตร
+                                                        </button>
+                                                    </div>
+                                                </div>
+
+                                                ${isSExp ? `
+                                                <div class="overflow-x-auto border-t border-slate-100">
+                                                    <table class="w-full text-sm text-left">
+                                                        <thead class="text-xs text-slate-500 uppercase bg-slate-50">
+                                                            <tr>
+                                                                <th class="px-3 py-2 text-center">ไตรมาส</th>
+                                                                <th class="px-3 py-2">รหัส</th>
+                                                                <th class="px-3 py-2">ชื่อหลักสูตร (รุ่น)</th>
+                                                                <th class="px-3 py-2 text-center">ชั่วโมง</th>
+                                                                <th class="px-3 py-2 text-center">จำนวนคน</th>
+                                                                <th class="px-3 py-2">ผู้รับผิดชอบ</th>
+                                                                <th class="px-3 py-2">วันเวลาที่เปิดฝึก</th>
+                                                                <th class="px-3 py-2 text-center">สถานะ</th>
+                                                                <th class="px-3 py-2 text-center no-print">จัดการ</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody class="divide-y divide-slate-100">
+                                                            ${courses.length === 0 ? `<tr><td colspan="9" class="px-3 py-4 text-center text-slate-400">ยังไม่มีข้อมูล</td></tr>` : ''}
+                                                            ${courses.map(course => {
+                                                                let qLabel = course.quarter || '1-2';
+                                                                if (qLabel === '1' || qLabel === '2') qLabel = '1-2';
+                                                                return `
+                                                            <tr class="hover:bg-slate-50">
+                                                                <td class="px-3 py-2 text-center"><span class="bg-indigo-50 text-indigo-600 border border-indigo-100 px-1.5 py-0.5 rounded text-[10px] font-bold">Q${qLabel}</span></td>
+                                                                <td class="px-3 py-2 font-mono text-slate-500 text-xs">${course.courseCode}</td>
+                                                                <td class="px-3 py-2 text-slate-800"><i class="fa-solid fa-book-open text-slate-300 mr-1.5 text-xs"></i>${course.courseName}</td>
+                                                                <td class="px-3 py-2 text-center text-slate-600 text-xs">${course.hours || '-'}</td>
+                                                                <td class="px-3 py-2 text-center text-slate-600 text-xs">${course.hasOwnProperty('trainees') ? course.trainees : 20}</td>
+                                                                <td class="px-3 py-2"><span class="inline-flex items-center gap-1 bg-slate-100 text-slate-700 px-2 py-0.5 rounded text-xs"><i class="fa-solid fa-user text-slate-400"></i> ${course.responsiblePerson}</span></td>
+                                                                <td class="px-3 py-2 text-slate-600 text-xs">${course.trainingDate}</td>
+                                                                <td class="px-3 py-2 text-center">${renderStatusBadge(course.status)}</td>
+                                                                <td class="px-3 py-2 text-center no-print whitespace-nowrap">
+                                                                    <button onclick="openModal('editCourse', '${project.id}', '${mainAct.id}', '${subAct.id}', '${course.id}')" class="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors" title="แก้ไข"><i class="fa-solid fa-pen"></i></button>
+                                                                    <button onclick="deleteItem('course', '${project.id}', '${mainAct.id}', '${subAct.id}', '${course.id}')" class="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors ml-1" title="ลบ"><i class="fa-solid fa-trash"></i></button>
+                                                                </td>
+                                                            </tr>`}).join('')}
+                                                        </tbody>
+                                                    </table>
+                                                </div>` : ''}
+                                            </div>`;
+                                        }).join('')}
+                                    </div>` : ''}
+                                </div>`;
+                            }).join('')}
+                        </div>` : ''}
+                    </div>
+                `;
+            });
+
+            listContainer.innerHTML = htmlStr;
+        }
+
+        function updateDashboardCharts(openedCourses, total, quarterCounts) {
+            const getPct = (val, tot = total) => tot > 0 ? Math.round((val / tot) * 100) : 0;
+            const openedPct = getPct(openedCourses);
+
+            document.getElementById('globalProgressContainer').innerHTML = `
+                <div class="bg-blue-50 p-4 rounded-xl border border-blue-100 text-left shadow-inner">
+                    <div class="flex justify-between text-sm mb-2 items-end">
+                        <span class="font-bold text-slate-700">รุ่นที่เปิดไปแล้วทั้งหมด</span>
+                        <span class="font-bold text-blue-700 text-base">${openedCourses} <span class="text-slate-500 text-sm font-normal">/ ${total}</span></span>
+                    </div>
+                    <div class="w-full bg-blue-200/50 rounded-full h-2.5 mb-1.5 overflow-hidden">
+                        <div class="bg-blue-600 h-2.5 rounded-full transition-all duration-500" style="width: ${openedPct}%"></div>
+                    </div>
+                    <div class="text-right text-xs text-blue-600/80 font-medium">ความคืบหน้า ${openedPct}%</div>
+                </div>
+            `;
+
+            ['1-2', '3', '4'].forEach(q => {
+                const canvasId = `chartQ${q.replace('-', '_')}`;
+                const textId = `textQ${q.replace('-', '_')}`;
+                
+                const ctx = document.getElementById(canvasId);
+                if (!ctx) return;
+                
+                const qData = quarterCounts[q];
+                const chartData = [qData.done, qData.active, qData.pending];
+                const hasData = qData.courses > 0;
+
+                document.getElementById(textId).innerHTML = `
+                    <span class="font-bold text-slate-800 text-sm">${qData.courses} รุ่น</span> <br>
+                    <span class="text-slate-500">จำนวนผู้เข้ารับการฝึกอบรม ${qData.trainees} คน</span>
+                `;
+
+                if (chartInstances[q]) {
+                    chartInstances[q].data.datasets[0].data = hasData ? chartData : [1];
+                    chartInstances[q].data.datasets[0].backgroundColor = hasData ? ['#10b981', '#3b82f6', '#e2e8f0'] : ['#f1f5f9'];
+                    chartInstances[q].update();
+                } else {
+                    chartInstances[q] = new Chart(ctx, {
+                        type: 'doughnut',
+                        data: {
+                            labels: ['เสร็จสิ้น', 'กำลังดำเนินการ', 'รอเปิดอบรม'],
+                            datasets: [{
+                                data: hasData ? chartData : [1],
+                                backgroundColor: hasData ? ['#10b981', '#3b82f6', '#e2e8f0'] : ['#f1f5f9'],
+                                borderWidth: 0,
+                                hoverOffset: 2
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: true,
+                            cutout: '65%',
+                            plugins: {
+                                legend: { display: false },
+                                tooltip: {
+                                    enabled: hasData,
+                                    callbacks: {
+                                        label: function(context) {
+                                            return ' ' + context.label + ': ' + context.raw + ' รุ่น';
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    });
+                }
+            });
+        }
+
+        function createKpiCard(title, value, iconClass) {
+            return `
+            <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex items-center gap-3">
+                <div class="p-2.5 bg-slate-50 rounded-lg"><i class="fa-solid ${iconClass} text-lg w-5 text-center"></i></div>
+                <div>
+                    <p class="text-xs text-slate-500 font-medium">${title}</p>
+                    <p class="text-xl font-bold text-slate-800 leading-none mt-1">${value}</p>
+                </div>
+            </div>`;
+        }
+
+        function renderStatusBadge(status) {
+            let colors = 'bg-slate-100 text-slate-600 border-slate-200';
+            if (status === 'กำลังดำเนินการ') colors = 'bg-blue-50 text-blue-700 border-blue-200';
+            else if (status === 'เสร็จสิ้น') colors = 'bg-emerald-50 text-emerald-700 border-emerald-200';
+            return `<span class="px-2 py-0.5 text-[10px] rounded-full border font-medium whitespace-nowrap ${colors}">${status}</span>`;
+        }
+
+        window.toggleProject = (id) => { expandedProjects.has(id) ? expandedProjects.delete(id) : expandedProjects.add(id); renderUI(); };
+        window.toggleMainActivity = (id) => { expandedMainActivities.has(id) ? expandedMainActivities.delete(id) : expandedMainActivities.add(id); renderUI(); };
+        window.toggleSubActivity = (id) => { expandedSubActivities.has(id) ? expandedSubActivities.delete(id) : expandedSubActivities.add(id); renderUI(); };
+
+        window.openModal = (type, pId = '', mId = '', sId = '', cId = '', presetCourseName = '') => {
+            document.getElementById('formModal').classList.remove('hidden-safely');
+            document.getElementById('formType').value = type;
+            document.getElementById('targetProjectId').value = pId;
+            document.getElementById('targetMainActivityId').value = mId;
+            document.getElementById('targetSubActivityId').value = sId;
+            document.getElementById('targetCourseId').value = cId;
+            
+            const mBody = document.getElementById('modalBody');
+            const title = document.getElementById('modalTitle');
+            
+            if (type === 'addProject' || type === 'editProject') {
+                title.innerText = type === 'addProject' ? 'เพิ่มโครงการใหม่' : 'แก้ไขโครงการ';
+                let pName = '';
+                if (type === 'editProject') pName = appData.find(x => x.id === pId)?.projectName || '';
+                mBody.innerHTML = `<div><label class="block text-sm font-medium mb-1">ชื่อโครงการ</label><input required id="inp_pName" value="${pName}" class="w-full p-2.5 border rounded-lg outline-none focus:ring-2 focus:ring-blue-600"></div>`;
+            } else if (type === 'addMainActivity' || type === 'editMainActivity') {
+                title.innerText = type === 'addMainActivity' ? 'เพิ่มกิจกรรมหลัก' : 'แก้ไขกิจกรรมหลัก';
+                let mName = '';
+                if (type === 'editMainActivity') {
+                    const p = appData.find(x => x.id === pId);
+                    mName = p.mainActivities.find(x => x.id === mId)?.mainActivityName || '';
+                }
+                mBody.innerHTML = `<div><label class="block text-sm font-medium mb-1">ชื่อกิจกรรมหลัก</label><input required id="inp_mName" value="${mName}" class="w-full p-2.5 border rounded-lg outline-none focus:ring-2 focus:ring-emerald-600"></div>`;
+            } else if (type === 'addSubActivity' || type === 'editSubActivity') {
+                title.innerText = type === 'addSubActivity' ? 'เพิ่มกิจกรรมย่อย' : 'แก้ไขกิจกรรมย่อย';
+                let sName = '';
+                if (type === 'editSubActivity') {
+                    const p = appData.find(x => x.id === pId);
+                    const m = p.mainActivities.find(x => x.id === mId);
+                    sName = m.subActivities.find(x => x.id === sId)?.subActivityName || '';
+                }
+                mBody.innerHTML = `<div><label class="block text-sm font-medium mb-1">ชื่อกิจกรรมย่อย</label><input required id="inp_sName" value="${sName}" class="w-full p-2.5 border rounded-lg outline-none focus:ring-2 focus:ring-amber-500"></div>`;
+            } else if (type === 'addCourse' || type === 'editCourse') {
+                title.innerText = type === 'addCourse' ? 'เพิ่มรุ่น/หลักสูตรใหม่' : 'แก้ไขรุ่น/หลักสูตร';
+                let cData = { code: '', name: presetCourseName, quarter: '1-2', hours: '', trainees: 20, person: '', date: '', status: 'รอเปิดอบรม' };
+                
+                if (type === 'editCourse') {
+                    const p = appData.find(x => x.id === pId);
+                    const m = p.mainActivities.find(x => x.id === mId);
+                    const s = m.subActivities.find(x => x.id === sId);
+                    const c = s.courses.find(x => x.id === cId);
+                    
+                    let savedQuarter = c.quarter || '1-2';
+                    if (savedQuarter === '1' || savedQuarter === '2') savedQuarter = '1-2';
+                    
+                    cData = { 
+                        code: c.courseCode, 
+                        name: c.courseName, 
+                        quarter: savedQuarter,
+                        hours: c.hours || '',
+                        trainees: c.hasOwnProperty('trainees') ? c.trainees : 20,
+                        person: c.responsiblePerson, 
+                        date: c.trainingDate, 
+                        status: c.status 
+                    };
+                }
+
+                mBody.innerHTML = `
+                    <div class="grid grid-cols-4 gap-3">
+                        <div class="col-span-1"><label class="block text-sm font-medium mb-1">ไตรมาส</label>
+                            <select id="inp_cQuarter" class="w-full p-2.5 border rounded-lg focus:ring-2 focus:ring-blue-600 bg-white text-sm">
+                                <option value="1-2" ${cData.quarter==='1-2'?'selected':''}>Q1-Q2</option>
+                                <option value="3" ${cData.quarter==='3'?'selected':''}>Q3</option>
+                                <option value="4" ${cData.quarter==='4'?'selected':''}>Q4</option>
+                            </select>
+                        </div>
+                        <div class="col-span-1"><label class="block text-sm font-medium mb-1">รหัส</label><input required id="inp_cCode" value="${cData.code}" class="w-full p-2.5 border rounded-lg focus:ring-2 focus:ring-blue-600 text-sm"></div>
+                        <div class="col-span-2"><label class="block text-sm font-medium mb-1">ชื่อหลักสูตร (รุ่น)</label><input required id="inp_cName" value="${cData.name}" class="w-full p-2.5 border rounded-lg focus:ring-2 focus:ring-blue-600 text-sm"></div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div><label class="block text-sm font-medium mb-1">จำนวนชั่วโมง</label><input type="number" id="inp_cHours" value="${cData.hours}" placeholder="เช่น 18" class="w-full p-2.5 border rounded-lg focus:ring-2 focus:ring-blue-600"></div>
+                        <div><label class="block text-sm font-medium mb-1">จำนวนคน (ต่อรุ่น)</label><input required type="number" id="inp_cTrainees" value="${cData.trainees}" min="1" class="w-full p-2.5 border rounded-lg focus:ring-2 focus:ring-blue-600"></div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div><label class="block text-sm font-medium mb-1">ผู้รับผิดชอบ</label><input required id="inp_cPerson" value="${cData.person}" class="w-full p-2.5 border rounded-lg focus:ring-2 focus:ring-blue-600"></div>
+                        <div><label class="block text-sm font-medium mb-1">วัน/เวลาที่เปิดฝึก</label><input required id="inp_cDate" value="${cData.date}" class="w-full p-2.5 border rounded-lg focus:ring-2 focus:ring-blue-600"></div>
+                    </div>
+                    <div><label class="block text-sm font-medium mb-1">สถานะ</label>
+                        <select id="inp_cStatus" class="w-full p-2.5 border rounded-lg focus:ring-2 focus:ring-blue-600 bg-white">
+                            <option value="รอเปิดอบรม" ${cData.status==='รอเปิดอบรม'?'selected':''}>รอเปิดอบรม</option>
+                            <option value="กำลังดำเนินการ" ${cData.status==='กำลังดำเนินการ'?'selected':''}>กำลังดำเนินการ</option>
+                            <option value="เสร็จสิ้น" ${cData.status==='เสร็จสิ้น'?'selected':''}>เสร็จสิ้น</option>
+                        </select>
+                    </div>`;
+            }
+        };
+
+        window.closeModal = () => {
+            document.getElementById('formModal').classList.add('hidden-safely');
+            document.getElementById('dataForm').reset();
+        };
+
+        document.getElementById('dataForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            if (!currentUser) return alert("กรุณารอระบบยืนยันตัวตนสักครู่...");
+
+            const type = document.getElementById('formType').value;
+            const pId = document.getElementById('targetProjectId').value;
+            const mId = document.getElementById('targetMainActivityId').value;
+            const sId = document.getElementById('targetSubActivityId').value;
+            const cId = document.getElementById('targetCourseId').value;
+            
+            const saveBtn = document.getElementById('saveBtn');
+            saveBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> กำลังบันทึก...';
+            saveBtn.disabled = true;
+
+            try {
+                if (type === 'addProject') {
+                    await addDoc(getProjectsCol(), {
+                        projectName: document.getElementById('inp_pName').value,
+                        mainActivities: [],
+                        createdAt: Date.now() // เพิ่มเวลาที่สร้างเพื่อให้ข้อมูลไปอยู่ท้ายสุดเสมอ
+                    });
+                } 
+                else if (type === 'editProject') {
+                    await updateDoc(getProjectDoc(pId), {
+                        projectName: document.getElementById('inp_pName').value
+                    });
+                }
+                else if (type === 'addMainActivity') {
+                    const proj = appData.find(x => x.id === pId);
+                    const newMAct = { id: 'M-' + Date.now(), mainActivityName: document.getElementById('inp_mName').value, subActivities: [] };
+                    await updateDoc(getProjectDoc(pId), { mainActivities: [...proj.mainActivities, newMAct] });
+                    expandedMainActivities.add(newMAct.id);
+                } 
+                else if (type === 'editMainActivity') {
+                    const proj = appData.find(x => x.id === pId);
+                    const mainActs = [...proj.mainActivities];
+                    const mIndex = mainActs.findIndex(x => x.id === mId);
+                    mainActs[mIndex].mainActivityName = document.getElementById('inp_mName').value;
+                    await updateDoc(getProjectDoc(pId), { mainActivities: mainActs });
+                }
+                else if (type === 'addSubActivity') {
+                    const proj = appData.find(x => x.id === pId);
+                    const mainActs = [...proj.mainActivities];
+                    const mIndex = mainActs.findIndex(x => x.id === mId);
+                    
+                    if (!mainActs[mIndex].subActivities) mainActs[mIndex].subActivities = [];
+                    const newSAct = { id: 'S-' + Date.now(), subActivityName: document.getElementById('inp_sName').value, courses: [] };
+                    mainActs[mIndex].subActivities.push(newSAct);
+                    
+                    await updateDoc(getProjectDoc(pId), { mainActivities: mainActs });
+                    expandedSubActivities.add(newSAct.id);
+                }
+                else if (type === 'editSubActivity') {
+                    const proj = appData.find(x => x.id === pId);
+                    const mainActs = [...proj.mainActivities];
+                    const mIndex = mainActs.findIndex(x => x.id === mId);
+                    const sIndex = mainActs[mIndex].subActivities.findIndex(x => x.id === sId);
+                    mainActs[mIndex].subActivities[sIndex].subActivityName = document.getElementById('inp_sName').value;
+                    await updateDoc(getProjectDoc(pId), { mainActivities: mainActs });
+                }
+                else if (type === 'addCourse') {
+                    const proj = appData.find(x => x.id === pId);
+                    const mainActs = [...proj.mainActivities];
+                    const mIndex = mainActs.findIndex(x => x.id === mId);
+                    const sIndex = mainActs[mIndex].subActivities.findIndex(x => x.id === sId);
+                    
+                    if (!mainActs[mIndex].subActivities[sIndex].courses) mainActs[mIndex].subActivities[sIndex].courses = [];
+                    mainActs[mIndex].subActivities[sIndex].courses.push({
+                        id: 'C-' + Date.now(),
+                        courseCode: document.getElementById('inp_cCode').value,
+                        courseName: document.getElementById('inp_cName').value,
+                        quarter: document.getElementById('inp_cQuarter').value,
+                        hours: document.getElementById('inp_cHours').value,
+                        trainees: parseInt(document.getElementById('inp_cTrainees').value) || 20,
+                        responsiblePerson: document.getElementById('inp_cPerson').value,
+                        trainingDate: document.getElementById('inp_cDate').value,
+                        status: document.getElementById('inp_cStatus').value
+                    });
+
+                    await updateDoc(getProjectDoc(pId), { mainActivities: mainActs });
+                } 
+                else if (type === 'editCourse') {
+                    const proj = appData.find(x => x.id === pId);
+                    const mainActs = [...proj.mainActivities];
+                    const mIndex = mainActs.findIndex(x => x.id === mId);
+                    const sIndex = mainActs[mIndex].subActivities.findIndex(x => x.id === sId);
+                    const cIndex = mainActs[mIndex].subActivities[sIndex].courses.findIndex(x => x.id === cId);
+                    
+                    mainActs[mIndex].subActivities[sIndex].courses[cIndex] = {
+                        ...mainActs[mIndex].subActivities[sIndex].courses[cIndex],
+                        courseCode: document.getElementById('inp_cCode').value,
+                        courseName: document.getElementById('inp_cName').value,
+                        quarter: document.getElementById('inp_cQuarter').value,
+                        hours: document.getElementById('inp_cHours').value,
+                        trainees: parseInt(document.getElementById('inp_cTrainees').value) || 20,
+                        responsiblePerson: document.getElementById('inp_cPerson').value,
+                        trainingDate: document.getElementById('inp_cDate').value,
+                        status: document.getElementById('inp_cStatus').value
+                    };
+
+                    await updateDoc(getProjectDoc(pId), { mainActivities: mainActs });
+                }
+                closeModal();
+            } catch (error) {
+                console.error("Error saving doc:", error);
+                alert("เกิดข้อผิดพลาดในการบันทึกข้อมูล: " + error.message);
+            } finally {
+                saveBtn.innerHTML = 'บันทึกข้อมูล';
+                saveBtn.disabled = false;
+            }
+        });
+
+        // ฟังก์ชันสำหรับการลบข้อมูล (Delete Function)
+        window.deleteItem = async (type, pId, mId = '', sId = '', cId = '') => {
+            if (!confirm('คุณยืนยันที่จะลบข้อมูลนี้ใช่หรือไม่?\n(คำเตือน: การลบจะไม่สามารถกู้คืนได้ และข้อมูลย่อยด้านในจะถูกลบไปด้วยทั้งหมด)')) return;
+            
+            if (!currentUser) return alert("กรุณารอระบบยืนยันตัวตนสักครู่...");
+            
+            try {
+                if (type === 'project') {
+                    await deleteDoc(getProjectDoc(pId));
+                } else if (type === 'mainActivity') {
+                    const proj = appData.find(x => x.id === pId);
+                    const updatedActs = proj.mainActivities.filter(x => x.id !== mId);
+                    await updateDoc(getProjectDoc(pId), { mainActivities: updatedActs });
+                } else if (type === 'subActivity') {
+                    const proj = appData.find(x => x.id === pId);
+                    const mainActs = [...proj.mainActivities];
+                    const mIndex = mainActs.findIndex(x => x.id === mId);
+                    mainActs[mIndex].subActivities = mainActs[mIndex].subActivities.filter(x => x.id !== sId);
+                    await updateDoc(getProjectDoc(pId), { mainActivities: mainActs });
+                } else if (type === 'course') {
+                    const proj = appData.find(x => x.id === pId);
+                    const mainActs = [...proj.mainActivities];
+                    const mIndex = mainActs.findIndex(x => x.id === mId);
+                    const sIndex = mainActs[mIndex].subActivities.findIndex(x => x.id === sId);
+                    mainActs[mIndex].subActivities[sIndex].courses = mainActs[mIndex].subActivities[sIndex].courses.filter(x => x.id !== cId);
+                    await updateDoc(getProjectDoc(pId), { mainActivities: mainActs });
+                }
+            } catch (error) {
+                console.error("Delete Error:", error);
+                alert("เกิดข้อผิดพลาดในการลบ: " + error.message);
+            }
+        };
+
+        // ==========================================
+        // ฟังก์ชันสำหรับ นำเข้า/ส่งออก EXCEL
+        // ==========================================
+
+        // ฟังก์ชันอ่านไฟล์ Excel นำเข้าฐานข้อมูล
+        window.handleExcelUpload = async (event) => {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            alert("กำลังอ่านไฟล์ Excel และบันทึกเข้าฐานข้อมูล กรุณารอสักครู่ (อาจใช้เวลาสักครู่หากข้อมูลมีจำนวนมาก)...");
+
+            const reader = new FileReader();
+            reader.onload = async (e) => {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    
+                    const firstSheetName = workbook.SheetNames[0];
+                    const worksheet = workbook.Sheets[firstSheetName];
+                    const jsonData = XLSX.utils.sheet_to_json(worksheet);
+                    
+                    if(jsonData.length === 0) {
+                        return alert("ไม่พบข้อมูลในไฟล์ Excel");
+                    }
+                    
+                    const projectsMap = {};
+
+                    jsonData.forEach(row => {
+                        const pName = row['ชื่อโครงการ'];
+                        const mName = row['กิจกรรมหลัก'];
+                        const sName = row['กิจกรรมย่อย'];
+                        
+                        if (!pName) return; // ข้ามบรรทัดที่ไม่มีชื่อโครงการ
+
+                        if (!projectsMap[pName]) {
+                            projectsMap[pName] = { projectName: pName, mainActivities: [] };
+                        }
+                        
+                        if (mName) {
+                            let mainAct = projectsMap[pName].mainActivities.find(m => m.mainActivityName === mName);
+                            if (!mainAct) {
+                                mainAct = { id: 'M-' + Date.now() + Math.random(), mainActivityName: mName, subActivities: [] };
+                                projectsMap[pName].mainActivities.push(mainAct);
+                            }
+
+                            if (sName) {
+                                let subAct = mainAct.subActivities.find(s => s.subActivityName === sName);
+                                if (!subAct) {
+                                    subAct = { id: 'S-' + Date.now() + Math.random(), subActivityName: sName, courses: [] };
+                                    mainAct.subActivities.push(subAct);
+                                }
+
+                                if (row['ชื่อหลักสูตร'] || row['รหัสหลักสูตร']) {
+                                    subAct.courses.push({
+                                        id: 'C-' + Date.now() + Math.random(),
+                                        courseCode: row['รหัสหลักสูตร'] || '',
+                                        courseName: row['ชื่อหลักสูตร'] || '',
+                                        quarter: row['ไตรมาส']?.toString() || '1-2',
+                                        hours: row['ชั่วโมง'] || '',
+                                        trainees: parseInt(row['จำนวนคน']) || 20,
+                                        responsiblePerson: row['ผู้รับผิดชอบ'] || '',
+                                        trainingDate: row['วันที่อบรม'] || '',
+                                        status: row['สถานะ'] || 'รอเปิดอบรม'
+                                    });
+                                }
+                            }
+                        }
+                    });
+
+                    const projectsArray = Object.values(projectsMap);
+                    let importedCount = 0;
+                    let baseTime = Date.now();
+                    
+                    for (const project of projectsArray) {
+                         project.createdAt = baseTime++; // เพิ่มเวลาสร้างแบบเรียงลำดับจากการ import
+                         await addDoc(getProjectsCol(), project);
+                         importedCount++;
+                    }
+
+                    alert(`นำเข้าข้อมูลสำเร็จแล้วจำนวน ${importedCount} โครงการ!`);
+                    document.getElementById('excelFileInput').value = ''; 
+                    
+                } catch (error) {
+                    console.error("Excel Import Error:", error);
+                    alert("เกิดข้อผิดพลาดในการนำเข้าข้อมูล: " + error.message);
+                }
+            };
+            
+            reader.readAsArrayBuffer(file);
+        };
+
+        // ฟังก์ชันดึงข้อมูลจากระบบออกเป็นไฟล์ Excel แบบมีการตกแต่ง (Styling)
+        window.exportToExcel = () => {
+            if (!appData || appData.length === 0) {
+                return alert("ไม่มีข้อมูลสำหรับส่งออก");
+            }
+
+            const aoaData = []; 
+            const rowsConfig = []; // เก็บความสูงของบรรทัด (Row heights)
+
+            // ----------------------------------------------------
+            // 🎨 การกำหนด Styles พื้นฐาน ของเซลล์ใน Excel
+            // ----------------------------------------------------
+            const borderAll = {
+                top: { style: "thin", color: { auto: 1 } },
+                bottom: { style: "thin", color: { auto: 1 } },
+                left: { style: "thin", color: { auto: 1 } },
+                right: { style: "thin", color: { auto: 1 } }
+            };
+
+            const styleProject = { font: { name: 'Sarabun', sz: 14, bold: true, color: { rgb: "1E3A8A" } } };
+            const styleMain = { font: { name: 'Sarabun', sz: 12, bold: true, color: { rgb: "047857" } } };
+            const styleSub = { font: { name: 'Sarabun', sz: 12, bold: true, color: { rgb: "B45309" } } };
+            
+            const styleHeader = {
+                font: { name: 'Sarabun', sz: 11, bold: true, color: { rgb: "FFFFFF" } },
+                fill: { fgColor: { rgb: "2563EB" } }, // สีพื้นหลังสีน้ำเงิน
+                alignment: { horizontal: "center", vertical: "center", wrapText: true },
+                border: borderAll
+            };
+
+            const styleDataCenterBase = {
+                font: { name: 'Sarabun', sz: 11 },
+                alignment: { horizontal: "center", vertical: "center" },
+                border: borderAll
+            };
+
+            const styleDataLeftBase = {
+                font: { name: 'Sarabun', sz: 11 },
+                alignment: { horizontal: "left", vertical: "center" },
+                border: borderAll
+            };
+
+            // ----------------------------------------------------
+            // 🔄 ดึงข้อมูลและกำหนดสไตล์ทีละบรรทัด
+            // ----------------------------------------------------
+            appData.forEach((project, pIndex) => {
+                
+                // แถวที่ 1: ชื่อโครงการ
+                aoaData.push([{ v: `${pIndex + 1}. ${project.projectName || 'ไม่มีชื่อโครงการ'}`, t: 's', s: styleProject }]);
+                rowsConfig.push({ hpt: 30 }); // ความสูงบรรทัด 30
+                
+                if (!project.mainActivities || project.mainActivities.length === 0) {
+                    aoaData.push([]); rowsConfig.push({ hpt: 15 });
+                    return;
+                }
+
+                project.mainActivities.forEach(mainAct => {
+                    // แถวที่ 2: กิจกรรมหลัก
+                    aoaData.push(["", { v: `กิจกรรมหลัก: ${mainAct.mainActivityName || ''}`, t: 's', s: styleMain }]);
+                    rowsConfig.push({ hpt: 25 });
+
+                    if (!mainAct.subActivities || mainAct.subActivities.length === 0) return;
+
+                    mainAct.subActivities.forEach(subAct => {
+                        // แถวที่ 3: กิจกรรมย่อย
+                        aoaData.push(["", "", { v: `กิจกรรมย่อย: ${subAct.subActivityName || ''}`, t: 's', s: styleSub }]);
+                        rowsConfig.push({ hpt: 22 });
+
+                        if (!subAct.courses || subAct.courses.length === 0) return;
+
+                        // แถวที่ 4: หัวตารางของหลักสูตร (มีพื้นหลังและเส้นขอบ)
+                        aoaData.push([
+                            "", "", "", 
+                            { v: "ไตรมาส", t: 's', s: styleHeader }, 
+                            { v: "รหัสหลักสูตร", t: 's', s: styleHeader }, 
+                            { v: "ชื่อหลักสูตร (รุ่น)", t: 's', s: styleHeader }, 
+                            { v: "ชั่วโมง", t: 's', s: styleHeader }, 
+                            { v: "จำนวนคน", t: 's', s: styleHeader }, 
+                            { v: "ผู้รับผิดชอบ", t: 's', s: styleHeader }, 
+                            { v: "วันเวลาที่เปิดฝึก", t: 's', s: styleHeader }, 
+                            { v: "สถานะ", t: 's', s: styleHeader }
+                        ]);
+                        rowsConfig.push({ hpt: 25 });
+
+                        // แถวที่ 5 เป็นต้นไป: ข้อมูลหลักสูตร (มีเส้นตีกรอบ พร้อมลงสีตามเงื่อนไข)
+                        subAct.courses.forEach(course => {
+                            let qLabel = course.quarter || '1-2';
+                            if (qLabel === '1' || qLabel === '2') qLabel = '1-2';
+
+                            // --- ตรวจสอบสถานะและลงสี (เขียว / เทา) ---
+                            let statusText = course.status || 'รอเปิดอบรม';
+                            let cellStatusStyle = JSON.parse(JSON.stringify(styleDataCenterBase)); // ทำสำเนา Style พื้นฐาน
+                            
+                            if (statusText === 'เสร็จสิ้น') {
+                                cellStatusStyle.fill = { fgColor: { rgb: "A9D08E" } }; // สีเขียว
+                            } else if (statusText === 'รอเปิดอบรม' || statusText === 'รอดำเนินการ' || statusText === 'กำลังดำเนินการ') {
+                                cellStatusStyle.fill = { fgColor: { rgb: "D9D9D9" } }; // สีเทา
+                            }
+
+                            // --- ตรวจสอบชื่อหลักสูตรและลงสี (ส้ม) ---
+                            let courseNameText = course.courseName || '-';
+                            let cellCourseStyle = JSON.parse(JSON.stringify(styleDataLeftBase)); // ทำสำเนา Style พื้นฐาน
+                            
+                            if (courseNameText.includes('รองบ')) {
+                                cellCourseStyle.fill = { fgColor: { rgb: "F4B084" } }; // สีส้ม
+                            }
+
+                            aoaData.push([
+                                "", "", "", // เว้นว่าง 3 คอลัมน์แรกเพื่อให้เยื้อง
+                                { v: `Q${qLabel}`, t: 's', s: styleDataCenterBase },
+                                { v: course.courseCode || '-', t: 's', s: styleDataCenterBase },
+                                { v: courseNameText, t: 's', s: cellCourseStyle }, // ใช้ style ที่ใส่สีแล้ว
+                                { v: course.hours || '-', t: 's', s: styleDataCenterBase },
+                                { v: course.hasOwnProperty('trainees') ? course.trainees : 20, t: 'n', s: styleDataCenterBase },
+                                { v: course.responsiblePerson || '-', t: 's', s: styleDataLeftBase },
+                                { v: course.trainingDate || '-', t: 's', s: styleDataCenterBase },
+                                { v: statusText, t: 's', s: cellStatusStyle } // ใช้ style ที่ใส่สีแล้ว
+                            ]);
+                            rowsConfig.push({ hpt: 20 });
+                        });
+                    });
+                });
+                
+                // เพิ่มบรรทัดว่างคั่นระหว่างจบแต่ละโครงการ
+                aoaData.push([]);
+                rowsConfig.push({ hpt: 15 });
+            });
+
+            // สร้าง Worksheet
+            const worksheet = XLSX.utils.aoa_to_sheet(aoaData);
+            
+            // 📏 ปรับความกว้างของคอลัมน์ (Column Widths)
+            worksheet['!cols'] = [
+                { wch: 5 },  // A: โครงการ (กำหนดขนาดเป็น 5)
+                { wch: 5 },  // B: กิจกรรมหลัก (กำหนดขนาดเป็น 5)
+                { wch: 5 },  // C: กิจกรรมย่อย (กำหนดขนาดเป็น 5)
+                { wch: 10 }, // D: ไตรมาส
+                { wch: 15 }, // E: รหัสหลักสูตร
+                { wch: 50 }, // F: ชื่อหลักสูตร
+                { wch: 10 }, // G: ชั่วโมง
+                { wch: 10 }, // H: จำนวนคน
+                { wch: 25 }, // ผู้รับผิดชอบ
+                { wch: 20 }, // J: วันเวลา
+                { wch: 15 }  // K: สถานะ
+            ];
+
+            // 📏 ปรับความสูงของแถว (Row Heights)
+            worksheet['!rows'] = rowsConfig;
+
+            // ผูกลง Workbook และส่งออก
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, "Training Data");
+
+            const date = new Date();
+            const fileName = `ข้อมูลการฝึกอบรม_${date.getFullYear()}${String(date.getMonth() + 1).padStart(2, '0')}${String(date.getDate()).padStart(2, '0')}.xlsx`;
+
+            XLSX.writeFile(workbook, fileName);
+        };
+
+        // ==========================================
+        // 9arm API AI Features
+        // ==========================================
+        const NINEARM_API_KEY = "sk-20LArD1OqnkmLT_xkHgxLQ";
+        const NINEARM_URL = "https://gateway.9arm.co/v1/chat/completions";
+        const MODEL_NAME = "qwen3.6-35b-a3b";
+
+        // ฟังก์ชันเชื่อมต่อ API แบบไม่วนลูปซ้ำซ้อน หากมี Error จะคืนค่ากลับมาโชว์เลย
+        async function fetch9armAI(prompt, isJsonMode = false) {
+            let messages = [
+                { role: "system", content: "คุณคือผู้ช่วย AI เชี่ยวชาญด้านการพัฒนาฝีมือแรงงานของไทย ให้คำตอบที่กระชับ แม่นยำ และเป็นประโยชน์" },
+                { role: "user", content: prompt }
+            ];
+
+            const payload = {
+                model: MODEL_NAME,
+                messages: messages
+            };
+
+            if (isJsonMode) {
+                payload.messages[0].content += " ให้ตอบกลับมาเป็นรูปแบบ JSON Array เท่านั้น ห้ามมีข้อความอื่นปนเด็ดขาด ตัวอย่างเช่น [\"ชื่อที่ 1\", \"ชื่อที่ 2\"]";
+            }
+
+            try {
+                const response = await fetch(NINEARM_URL, {
+                    method: "POST",
+                    headers: { 
+                        "Content-Type": "application/json",
+                        "Authorization": `Bearer ${NINEARM_API_KEY}`
+                    },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!response.ok) {
+                    const errText = await response.text();
+                    throw new Error(`เซิร์ฟเวอร์ตอบกลับรหัส ${response.status} (${errText})`);
+                }
+                
+                const result = await response.json();
+                if (result.choices && result.choices[0] && result.choices[0].message) {
+                    return result.choices[0].message.content;
+                }
+                throw new Error("รูปแบบข้อมูลที่ AI ตอบกลับมาไม่ถูกต้อง");
+                
+            } catch (error) {
+                // ดักจับ Error ประเภทการเชื่อมต่อ (Network/CORS)
+                if (error.name === 'TypeError' && error.message.includes('fetch')) {
+                    throw new Error("ไม่สามารถเชื่อมต่อกับ 9arm API ได้ (เซิร์ฟเวอร์ปลายทางอาจไม่รองรับการเรียกจาก Browser หรือปิดกั้น CORS)");
+                }
+                throw error;
+            }
+        }
+
+        // Modal Handlers
+        window.closeAiModal = () => {
+            document.getElementById('aiModal').classList.add('hidden-safely');
+        };
+
+        window.openAiModal = (title, contentHTML = null) => {
+            document.getElementById('aiModalTitle').innerHTML = `✨ ${title}`;
+            
+            if (contentHTML) {
+                document.getElementById('aiModalBody').innerHTML = contentHTML;
+            } else {
+                document.getElementById('aiModalBody').innerHTML = `
+                    <div class="text-center py-8">
+                        <i class="fa-solid fa-sparkles fa-spin text-4xl text-purple-400 mb-4"></i>
+                        <p class="text-purple-600 font-medium">กำลังประมวลผลด้วย 9arm AI...</p>
+                    </div>`;
+            }
+            document.getElementById('aiModal').classList.remove('hidden-safely');
+        };
+
+        function showErrorInModal(errorMsg) {
+            return `
+                <div class="text-red-600 text-center font-medium p-6 bg-red-50 rounded-lg border border-red-200 shadow-sm">
+                    <i class="fa-solid fa-triangle-exclamation text-3xl mb-3"></i><br>
+                    <span class="text-lg">เกิดข้อผิดพลาดในการเชื่อมต่อ AI</span><br>
+                    <div class="mt-2 text-sm font-normal text-red-500 bg-white p-3 rounded border border-red-100 overflow-x-auto text-left">
+                        ${errorMsg}
+                    </div>
+                </div>`;
+        }
+
+        // Feature 1: Dashboard Analytics Summary
+        window.generateAiSummary = async () => {
+            if (!appData || appData.length === 0) {
+                alert("ยังไม่มีข้อมูลโครงการให้วิเคราะห์ครับ");
+                return;
+            }
+
+            window.openAiModal("AI วิเคราะห์ภาพรวมโครงการ");
+
+            const summaryData = { totalProjects: appData.length, coursesBreakdown: [] };
+            appData.forEach(p => {
+                p.mainActivities.forEach(ma => {
+                    (ma.subActivities || []).forEach(sa => {
+                        (sa.courses || []).forEach(c => {
+                            if (summaryData.coursesBreakdown.length < 200) {
+                                summaryData.coursesBreakdown.push({ quarter: c.quarter, status: c.status, trainees: c.trainees });
+                            }
+                        });
+                    });
+                });
+            });
+
+            const prompt = `ในฐานะผู้เชี่ยวชาญด้านการพัฒนาฝีมือแรงงาน โปรดวิเคราะห์ข้อมูลภาพรวมของการฝึกอบรมต่อไปนี้ 
+            แล้วเขียนสรุปผลที่น่าสนใจ พร้อมข้อเสนอแนะเชิงกลยุทธ์ 2-3 ข้อ 
+            ข้อมูลดิบ: ${JSON.stringify(summaryData)}`;
+
+            try {
+                const resultText = await fetch9armAI(prompt, false);
+                document.getElementById('aiModalBody').innerHTML = resultText.replace(/```html|```/g, '').trim();
+            } catch (error) {
+                document.getElementById('aiModalBody').innerHTML = showErrorInModal(error.message);
+            }
+        };
+
+        // Feature 2: Course Idea Suggestion based on Sub-Activity topic
+        window.openAiCourseSuggestModal = async (pId, mId, sId, topic) => {
+            window.openAiModal(`AI ช่วยคิดหลักสูตรสำหรับหัวข้อ: <span class="font-normal">"${topic}"</span>`);
+
+            const prompt = `ในฐานะผู้ออกแบบหลักสูตรฝึกอบรม โปรดแนะนำชื่อหลักสูตรที่น่าสนใจและทันสมัยจำนวน 3 หลักสูตร ที่เกี่ยวข้องโดยตรงกับหัวข้อกิจกรรมย่อย "${topic}"`;
+
+            try {
+                const resultText = await fetch9armAI(prompt, true);
+                let cleanJson = resultText.replace(/```json/g, '').replace(/```/g, '').trim();
+                const courses = JSON.parse(cleanJson);
+                
+                let buttonsHtml = courses.map(courseName => `
+                    <button onclick="window.selectAiCourse('${pId}', '${mId}', '${sId}', '${courseName.replace(/'/g, "\\'")}')" 
+                            class="w-full text-left p-3 mb-2 bg-purple-50 hover:bg-purple-100 border border-purple-200 rounded-lg transition-colors text-slate-700 flex items-center justify-between group">
+                        <span><i class="fa-solid fa-lightbulb text-purple-400 mr-2"></i> ${courseName}</span>
+                        <span class="text-xs text-purple-600 bg-white px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity shadow-sm">นำไปใช้</span>
+                    </button>
+                `).join('');
+
+                document.getElementById('aiModalBody').innerHTML = `
+                    <p class="mb-4 text-sm text-slate-500">นี่คือชื่อหลักสูตรที่ AI แนะนำ เลือกเพื่อนำไปสร้างหลักสูตรได้เลย:</p>
+                    ${buttonsHtml}
+                `;
+            } catch (error) {
+                document.getElementById('aiModalBody').innerHTML = showErrorInModal(error.message);
+            }
+        };
+
+        // Helper function for Feature 2
+        window.selectAiCourse = (pId, mId, sId, courseName) => {
+            closeAiModal();
+            openModal('addCourse', pId, mId, sId, '', courseName);
+        };
+
+        // Feature 3: Ask Custom Question
+        window.openAiQnAModal = () => {
+            if (!appData || appData.length === 0) {
+                alert("ยังไม่มีข้อมูลโครงการให้วิเคราะห์ครับ");
+                return;
+            }
+
+            const contentHTML = `
+                <div class="space-y-4">
+                    <p class="text-sm text-slate-500">พิมพ์คำถามที่คุณต้องการรู้เกี่ยวกับข้อมูลการฝึกอบรม (เช่น "รชต ฝึกไปทั้งหมดกี่รุ่น", "มีหลักสูตรไหนที่สถานะเสร็จสิ้นบ้าง?")</p>
+                    <div class="flex gap-2">
+                        <input type="text" id="aiQuestionInput" placeholder="พิมพ์คำถามที่นี่..." class="flex-1 p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-600 outline-none text-sm">
+                        <button onclick="window.askAiQuestion()" id="aiAskBtn" class="bg-purple-600 text-white px-5 py-2 rounded-lg hover:bg-purple-700 transition-colors text-sm font-medium whitespace-nowrap shadow-sm">
+                            ส่งคำถาม
+                        </button>
+                    </div>
+                    <div id="aiAnswerBox" class="hidden mt-4 p-5 bg-purple-50/50 rounded-xl border border-purple-100 min-h-[100px] ai-content text-slate-700 shadow-inner">
+                        <!-- Answer will appear here -->
+                    </div>
+                </div>
+            `;
+            window.openAiModal("ถาม-ตอบ ข้อมูลการฝึกอบรมด้วย AI", contentHTML);
+
+            setTimeout(() => {
+                const inputField = document.getElementById('aiQuestionInput');
+                if(inputField) {
+                    inputField.focus();
+                    inputField.addEventListener('keypress', function (e) {
+                        if (e.key === 'Enter') {
+                            window.askAiQuestion();
+                        }
+                    });
+                }
+            }, 100);
+        };
+
+        window.askAiQuestion = async () => {
+            const questionInput = document.getElementById('aiQuestionInput');
+            const answerBox = document.getElementById('aiAnswerBox');
+            const askBtn = document.getElementById('aiAskBtn');
+            const question = questionInput.value.trim();
+
+            if (!question) {
+                alert("กรุณาพิมพ์คำถามครับ");
+                return;
+            }
+
+            // Show loading
+            answerBox.classList.remove('hidden');
+            answerBox.innerHTML = `
+                <div class="flex flex-col items-center justify-center gap-3 text-purple-600 py-6">
+                    <i class="fa-solid fa-sparkles fa-spin text-3xl"></i> 
+                    <span class="font-medium">กำลังค้นหาคำตอบ...</span>
+                </div>
+            `;
+            askBtn.disabled = true;
+            askBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+
+            // ดึงข้อมูลและจำกัดจำนวนไม่ให้เกิด Context Limit (ตั้งไว้สูงสุด 250 รายการ)
+            let dataString = "";
+            let count = 0;
+            appData.forEach(p => {
+                p.mainActivities.forEach(ma => {
+                    (ma.subActivities || []).forEach(sa => {
+                        (sa.courses || []).forEach(c => {
+                            count++;
+                            if (count <= 250) {
+                                dataString += `- โครงการ: ${p.projectName}, หลักสูตร: ${c.courseName}, ผู้รับผิดชอบ: ${c.responsiblePerson}, สถานะ: ${c.status}, คน: ${c.trainees}\n`;
+                            }
+                        });
+                    });
+                });
+            });
+
+            if (count > 250) {
+                dataString += `\n... (มีข้อมูลอีก ${count - 250} รายการ แต่ถูกซ่อนไว้เพื่อไม่ให้เกินข้อจำกัดของระบบ AI)`;
+            }
+
+            const prompt = `ในฐานะผู้ช่วยวิเคราะห์ข้อมูลการฝึกอบรมขององค์กร โปรดตอบคำถามของผู้ใช้โดยอิงจาก "รายการข้อมูล" ที่ให้มาด้านล่างเท่านั้น
+            
+คำถามของผู้ใช้: "${question}"
+            
+คำแนะนำการตอบ:
+- ตอบกลับเป็นภาษาไทยที่อ่านง่ายและเป็นธรรมชาติ
+- นับจากข้อมูลที่ให้มาอย่างละเอียดและแม่นยำที่สุด
+- หากไม่มีข้อมูล ให้ตอบอย่างสุภาพว่า "ไม่พบข้อมูลที่ตรงกับคำถามในระบบ"
+
+รายการข้อมูลฝึกอบรมทั้งหมด:
+${dataString || "ไม่มีข้อมูลในระบบ"}`;
+
+            try {
+                const resultText = await fetch9armAI(prompt, false);
+                let formattedText = resultText
+                    .replace(/```html|```/g, '')
+                    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                    .replace(/\*(.*?)\*/g, '<em>$1</em>')
+                    .replace(/\n/g, '<br>');
+                answerBox.innerHTML = formattedText;
+            } catch (error) {
+                answerBox.innerHTML = showErrorInModal(error.message);
+            } finally {
+                askBtn.disabled = false;
+                askBtn.innerHTML = 'ส่งคำถาม';
+            }
+        };
+
+    </script>
+</body>
+</html>
