@@ -247,7 +247,13 @@
                 <p class="text-sm text-slate-500 mb-6">กรุณาใส่รหัสผ่านเพื่อจัดการข้อมูล</p>
                 
                 <form onsubmit="submitLogin(event)">
-                    <input type="password" id="adminPinInput" placeholder="รหัสผ่าน" class="w-full text-center tracking-widest text-lg p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-600 outline-none mb-4" required>
+                    <!-- เพิ่มปุ่มเปิด/ปิดตา -->
+                    <div class="relative mb-4">
+                        <input type="password" id="adminPinInput" placeholder="รหัสผ่าน" class="w-full text-center tracking-widest text-lg p-3 pr-10 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-600 outline-none" required>
+                        <button type="button" onclick="togglePassword()" class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 outline-none p-1">
+                            <i class="fa-solid fa-eye" id="eyeIcon"></i>
+                        </button>
+                    </div>
                     <div class="flex gap-2">
                         <button type="button" onclick="closeLoginModal()" class="flex-1 px-4 py-2 text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors">ยกเลิก</button>
                         <button type="submit" class="flex-1 px-4 py-2 bg-slate-800 text-white rounded-lg hover:bg-slate-900 transition-colors">เข้าสู่ระบบ</button>
@@ -345,11 +351,17 @@
 
         // --- Admin Authentication State ---
         let isAdmin = sessionStorage.getItem('isAdmin') === 'true';
-        const ADMIN_PIN = "Rachata1612@"; // เปลี่ยนรหัสผ่านตรงนี้ได้
+        // รหัสผ่านที่ถูกแปลงเป็น Base64 ป้องกันการดูจาก Source Code แบบง่ายๆ
+        const ADMIN_PIN_ENCODED = "UGxha3RoYWlsYW5kMTIzQA=="; 
 
         window.openLoginModal = () => {
             document.getElementById('loginModal').classList.remove('hidden-safely');
             document.getElementById('adminPinInput').value = '';
+            
+            // รีเซ็ตปุ่มตาให้เป็นแบบซ่อนเสมอเมื่อเปิด Modal
+            document.getElementById('adminPinInput').type = 'password';
+            document.getElementById('eyeIcon').className = 'fa-solid fa-eye';
+            
             setTimeout(() => document.getElementById('adminPinInput').focus(), 100);
         };
 
@@ -357,17 +369,35 @@
             document.getElementById('loginModal').classList.add('hidden-safely');
         };
 
+        // เพิ่มฟังก์ชันสลับ เปิด/ปิด รหัสผ่าน
+        window.togglePassword = () => {
+            const input = document.getElementById('adminPinInput');
+            const icon = document.getElementById('eyeIcon');
+            if (input.type === 'password') {
+                input.type = 'text';
+                icon.classList.remove('fa-eye');
+                icon.classList.add('fa-eye-slash');
+            } else {
+                input.type = 'password';
+                icon.classList.remove('fa-eye-slash');
+                icon.classList.add('fa-eye');
+            }
+        };
+
         window.submitLogin = (e) => {
             e.preventDefault();
-            const pin = document.getElementById('adminPinInput').value;
-            if (pin === ADMIN_PIN) {
+            // ใช้ .trim() ตัดช่องว่างออก เผื่อว่ากดก๊อปปี้มาแล้วมีวรรคแถมมาด้วย
+            const pin = document.getElementById('adminPinInput').value.trim();
+            
+            // ตรวจสอบรหัสผ่านโดยการแปลงสิ่งที่ผู้ใช้พิมพ์ เป็น Base64 แล้วเอาไปเทียบกับตัวแปรที่ซ่อนไว้
+            if (btoa(pin) === ADMIN_PIN_ENCODED) {
                 isAdmin = true;
                 sessionStorage.setItem('isAdmin', 'true');
                 closeLoginModal();
                 refreshAuthUI();
                 renderUI(); // Re-render to show edit/delete buttons
             } else {
-                alert('รหัสผ่านไม่ถูกต้อง');
+                alert('รหัสผ่านไม่ถูกต้อง! กรุณาตรวจสอบตัวพิมพ์เล็ก-ใหญ่ การเว้นวรรค หรือภาษาบนแป้นพิมพ์อีกครั้งครับ');
             }
         };
 
