@@ -1201,23 +1201,31 @@
         // 9arm API AI Features
         // ==========================================
         const NINEARM_API_KEY = "sk-ZRW9Clti_GNTvEN7V-eCNA";
-        const NINEARM_URL = "https://gateway.9arm.co/v1/chat/completions"; // <-- แก้ไข URL ตรงนี้ให้ถูกต้องสำหรับ Chat Completions
+        const NINEARM_URL = "https://gateway.9arm.co/v1/chat/completions"; 
         const MODEL_NAME = "qwen3.6-35b-a3b";
 
-        // ฟังก์ชันเชื่อมต่อ API แบบไม่วนลูปซ้ำซ้อน หากมี Error จะคืนค่ากลับมาโชว์เลย
-        async function fetch9armAI(prompt, isJsonMode = false) {
+        // ฟังก์ชันเชื่อมต่อ API แบบไม่วนลูปซ้ำซ้อน
+        async function fetch9armAI(prompt, isJsonMode = false, customSystemPrompt = null) {
+            // ปรับ System Prompt ให้ฉลาดและรัดกุมขึ้น
+            let defaultSystemPrompt = `คุณคือ "ผู้เชี่ยวชาญด้านการวิเคราะห์ข้อมูลฝึกอบรม" ประจำสำนักงานพัฒนาฝีมือแรงงาน 
+กฎสำคัญ:
+1. อ้างอิงคำตอบจากข้อมูลที่ผู้ใช้แนบมาให้เท่านั้น ห้ามเดา หรือสร้างข้อมูลตัวเลข/ชื่อหลักสูตรขึ้นมาเองเด็ดขาด
+2. หากมีการให้นับจำนวน ให้ตรวจสอบความถูกต้องจากข้อมูลอย่างรอบคอบ
+3. ตอบเป็นภาษาไทยที่กระชับ เป็นทางการแต่อ่านง่าย ใช้ Bullet points หรือตารางเพื่อให้อ่านง่ายขึ้น`;
+
             let messages = [
-                { role: "system", content: "คุณคือผู้ช่วย AI เชี่ยวชาญด้านการพัฒนาฝีมือแรงงานของไทย ให้คำตอบที่กระชับ แม่นยำ และเป็นประโยชน์" },
+                { role: "system", content: customSystemPrompt || defaultSystemPrompt },
                 { role: "user", content: prompt }
             ];
 
             const payload = {
                 model: MODEL_NAME,
-                messages: messages
+                messages: messages,
+                temperature: 0.3, // ลด Temperature ลงเพื่อให้คำตอบนิ่งและแม่นยำ ไม่เพ้อเจ้อ
             };
 
             if (isJsonMode) {
-                payload.messages[0].content += " ให้ตอบกลับมาเป็นรูปแบบ JSON Array เท่านั้น ห้ามมีข้อความอื่นปนเด็ดขาด ตัวอย่างเช่น [\"ชื่อที่ 1\", \"ชื่อที่ 2\"]";
+                payload.messages[0].content += " ให้ตอบกลับมาเป็นรูปแบบ JSON Array ล้วนๆ เท่านั้น ห้ามมีข้อความอธิบายอื่นปนเด็ดขาด ตัวอย่างเช่น [\"ชื่อที่ 1\", \"ชื่อที่ 2\"]";
             }
 
             try {
@@ -1242,7 +1250,6 @@
                 throw new Error("รูปแบบข้อมูลที่ AI ตอบกลับมาไม่ถูกต้อง");
                 
             } catch (error) {
-                // ดักจับ Error ประเภทการเชื่อมต่อ (Network/CORS)
                 if (error.name === 'TypeError' && error.message.includes('fetch')) {
                     throw new Error("ไม่สามารถเชื่อมต่อกับ 9arm API ได้ (เซิร์ฟเวอร์ปลายทางอาจไม่รองรับการเรียกจาก Browser หรือปิดกั้น CORS)");
                 }
@@ -1290,26 +1297,66 @@
 
             window.openAiModal("AI วิเคราะห์ภาพรวมโครงการ");
 
-            const summaryData = { totalProjects: appData.length, coursesBreakdown: [] };
+            // --- Pre-Aggregation: คำนวณข้อมูลเบื้องต้นให้ AI เพื่อให้ AI ฉลาดขึ้นและไม่บวกเลขผิด ---
+            let totalProjects = appData.length;
+            let totalCourses = 0;
+            let totalTrainees = 0;
+            let statusCount = { 'รอเปิดอบรม': 0, 'กำลังดำเนินการ': 0, 'เสร็จสิ้น': 0 };
+            let quarterCount = { '1-2': 0, '3': 0, '4': 0 };
+            let personCount = {};
+
             appData.forEach(p => {
                 p.mainActivities.forEach(ma => {
                     (ma.subActivities || []).forEach(sa => {
                         (sa.courses || []).forEach(c => {
-                            if (summaryData.coursesBreakdown.length < 200) {
-                                summaryData.coursesBreakdown.push({ quarter: c.quarter, status: c.status, trainees: c.trainees });
+                            totalCourses++;
+                            totalTrainees += (parseInt(c.trainees) || 0);
+                            
+                            if (statusCount[c.status] !== undefined) statusCount[c.status]++;
+                            
+                            let q = c.quarter || '1-2';
+                            if (q === '1' || q === '2') q = '1-2';
+                            if (quarterCount[q] !== undefined) quarterCount[q]++;
+
+                            if (c.responsiblePerson) {
+                                personCount[c.responsiblePerson] = (personCount[c.responsiblePerson] || 0) + 1;
                             }
                         });
                     });
                 });
             });
 
-            const prompt = `ในฐานะผู้เชี่ยวชาญด้านการพัฒนาฝีมือแรงงาน โปรดวิเคราะห์ข้อมูลภาพรวมของการฝึกอบรมต่อไปนี้ 
-            แล้วเขียนสรุปผลที่น่าสนใจ พร้อมข้อเสนอแนะเชิงกลยุทธ์ 2-3 ข้อ 
-            ข้อมูลดิบ: ${JSON.stringify(summaryData)}`;
+            // หาคนรับผิดชอบงานเยอะสุด 5 อันดับ
+            let topPersons = Object.keys(personCount)
+                .map(p => ({ name: p, count: personCount[p] }))
+                .sort((a, b) => b.count - a.count)
+                .slice(0, 5);
+
+            const aggregatedData = {
+                "จำนวนโครงการทั้งหมด": totalProjects,
+                "จำนวนรุ่นทั้งหมด": totalCourses,
+                "เป้าหมายผู้ฝึกอบรมรวม (คน)": totalTrainees,
+                "สรุปสถานะ": statusCount,
+                "สรุปรายไตรมาส": quarterCount,
+                "ผู้รับผิดชอบหลักสูตรสูงสุด (Top 5)": topPersons
+            };
+
+            const prompt = `จากข้อมูลสถิติเชิงลึก (Aggregated Data) ด้านการพัฒนาฝีมือแรงงานต่อไปนี้:
+${JSON.stringify(aggregatedData, null, 2)}
+
+โปรดทำหน้าที่เป็นที่ปรึกษาผู้บริหาร (Executive Advisor) และดำเนินการดังนี้:
+1. เขียนสรุป Executive Summary สั้นๆ 1 ย่อหน้า ให้เห็นภาพรวมความคืบหน้า
+2. ชี้ให้เห็นจุดเด่น หรือความเสี่ยงที่พบจากข้อมูล (เช่น สัดส่วนงานที่ยังรอเปิดอบรมเทียบกับงานที่เสร็จแล้ว, ภาระงานกระจุกตัวที่ใครหรือไม่)
+3. ให้ข้อเสนอแนะเชิงกลยุทธ์ 2-3 ข้อ เพื่อขับเคลื่อนแผนงานให้บรรลุเป้าหมาย`;
 
             try {
                 const resultText = await fetch9armAI(prompt, false);
-                document.getElementById('aiModalBody').innerHTML = resultText.replace(/```html|```/g, '').trim();
+                // จัดการ Markdown พื้นฐาน
+                let formattedText = resultText
+                    .replace(/```html|```/g, '')
+                    .replace(/\*\*(.*?)\*\*/g, '<strong class="text-purple-800">$1</strong>')
+                    .replace(/\n/g, '<br>');
+                document.getElementById('aiModalBody').innerHTML = formattedText;
             } catch (error) {
                 document.getElementById('aiModalBody').innerHTML = showErrorInModal(error.message);
             }
@@ -1319,10 +1366,11 @@
         window.openAiCourseSuggestModal = async (pId, mId, sId, topic) => {
             window.openAiModal(`AI ช่วยคิดหลักสูตรสำหรับหัวข้อ: <span class="font-normal">"${topic}"</span>`);
 
-            const prompt = `ในฐานะผู้ออกแบบหลักสูตรฝึกอบรม โปรดแนะนำชื่อหลักสูตรที่น่าสนใจและทันสมัยจำนวน 3 หลักสูตร ที่เกี่ยวข้องโดยตรงกับหัวข้อกิจกรรมย่อย "${topic}"`;
+            const customSysPrompt = "คุณคือวิทยากรผู้เชี่ยวชาญการออกแบบหลักสูตรระยะสั้น ให้คิดชื่อหลักสูตรที่ดึงดูดใจ ทันสมัย และตรงกับความต้องการของตลาดแรงงานไทย";
+            const prompt = `โปรดแนะนำชื่อหลักสูตรฝึกอบรมที่น่าสนใจและนำไปใช้งานได้จริง จำนวน 3 หลักสูตร ที่สอดคล้องกับหัวข้อกิจกรรม: "${topic}"`;
 
             try {
-                const resultText = await fetch9armAI(prompt, true);
+                const resultText = await fetch9armAI(prompt, true, customSysPrompt);
                 let cleanJson = resultText.replace(/```json/g, '').replace(/```/g, '').trim();
                 const courses = JSON.parse(cleanJson);
                 
@@ -1358,7 +1406,7 @@
 
             const contentHTML = `
                 <div class="space-y-4">
-                    <p class="text-sm text-slate-500">พิมพ์คำถามที่คุณต้องการรู้เกี่ยวกับข้อมูลการฝึกอบรม </p>
+                    <p class="text-sm text-slate-500">พิมพ์คำถามที่คุณต้องการรู้เกี่ยวกับข้อมูลการฝึกอบรม (เช่น "รชต ฝึกไปทั้งหมดกี่รุ่น", "มีหลักสูตรไหนที่สถานะเสร็จสิ้นบ้าง?")</p>
                     <div class="flex gap-2">
                         <input type="text" id="aiQuestionInput" placeholder="พิมพ์คำถามที่นี่..." class="flex-1 p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-600 outline-none text-sm">
                         <button onclick="window.askAiQuestion()" id="aiAskBtn" class="bg-purple-600 text-white px-5 py-2 rounded-lg hover:bg-purple-700 transition-colors text-sm font-medium whitespace-nowrap shadow-sm">
@@ -1401,49 +1449,62 @@
             answerBox.innerHTML = `
                 <div class="flex flex-col items-center justify-center gap-3 text-purple-600 py-6">
                     <i class="fa-solid fa-sparkles fa-spin text-3xl"></i> 
-                    <span class="font-medium">กำลังค้นหาคำตอบ...</span>
+                    <span class="font-medium">กำลังค้นหาและประมวลผลคำตอบ...</span>
                 </div>
             `;
             askBtn.disabled = true;
             askBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
 
-            // ดึงข้อมูลและจำกัดจำนวนไม่ให้เกิด Context Limit (ตั้งไว้สูงสุด 250 รายการ)
-            let dataString = "";
+            // --- Data Structuring: แปลงข้อมูลเป็นรูปแบบตาราง (CSV) เพื่อให้ AI เข้าใจง่ายและประหยัด Token ---
+            let dataHeaders = "ชื่อโครงการ|กิจกรรมหลัก|กิจกรรมย่อย|รหัสหลักสูตร|ชื่อหลักสูตร|ไตรมาส|ชั่วโมง|คน|ผู้รับผิดชอบ|สถานะ\n";
+            let dataRows = "";
             let count = 0;
+            const MAX_ROWS = 300; // เพิ่มเป็น 300 ได้เพราะรูปแบบ CSV ประหยัด Token มากขึ้น
+
             appData.forEach(p => {
                 p.mainActivities.forEach(ma => {
                     (ma.subActivities || []).forEach(sa => {
                         (sa.courses || []).forEach(c => {
                             count++;
-                            if (count <= 250) {
-                                dataString += `- โครงการ: ${p.projectName}, หลักสูตร: ${c.courseName}, ผู้รับผิดชอบ: ${c.responsiblePerson}, สถานะ: ${c.status}, คน: ${c.trainees}\n`;
+                            if (count <= MAX_ROWS) {
+                                let qLabel = c.quarter || '1-2';
+                                if (qLabel === '1' || qLabel === '2') qLabel = '1-2';
+                                
+                                // คั่นด้วย | และลบ | ออกจากชื่อเพื่อไม่ให้โครงสร้างตารางพัง
+                                const clean = (str) => (str || '-').toString().replace(/\|/g, ' ');
+                                
+                                dataRows += `${clean(p.projectName)}|${clean(ma.mainActivityName)}|${clean(sa.subActivityName)}|${clean(c.courseCode)}|${clean(c.courseName)}|Q${qLabel}|${clean(c.hours)}|${clean(c.trainees)}|${clean(c.responsiblePerson)}|${clean(c.status)}\n`;
                             }
                         });
                     });
                 });
             });
 
-            if (count > 250) {
-                dataString += `\n... (มีข้อมูลอีก ${count - 250} รายการ แต่ถูกซ่อนไว้เพื่อไม่ให้เกินข้อจำกัดของระบบ AI)`;
+            let fullDataString = dataHeaders + dataRows;
+            if (count > MAX_ROWS) {
+                fullDataString += `\n[ข้อมูลถูกตัดทอน มีอีก ${count - MAX_ROWS} รายการที่ซ่อนไว้]`;
             }
 
-            const prompt = `ในฐานะผู้ช่วยวิเคราะห์ข้อมูลการฝึกอบรมขององค์กร โปรดตอบคำถามของผู้ใช้โดยอิงจาก "รายการข้อมูล" ที่ให้มาด้านล่างเท่านั้น
+            // --- Chain-of-Thought Prompting: สั่งให้ AI คิดเป็นขั้นตอน ---
+            const prompt = `ด้านล่างคือฐานข้อมูลหลักสูตรฝึกอบรมในรูปแบบตาราง (คั่นด้วย |)
             
-คำถามของผู้ใช้: "${question}"
-            
-คำแนะนำการตอบ:
-- ตอบกลับเป็นภาษาไทยที่อ่านง่ายและเป็นธรรมชาติ
-- นับจากข้อมูลที่ให้มาอย่างละเอียดและแม่นยำที่สุด
-- หากไม่มีข้อมูล ให้ตอบอย่างสุภาพว่า "ไม่พบข้อมูลที่ตรงกับคำถามในระบบ"
+${fullDataString}
 
-รายการข้อมูลฝึกอบรมทั้งหมด:
-${dataString || "ไม่มีข้อมูลในระบบ"}`;
+คำถามจากผู้ใช้: "${question}"
+
+กระบวนการคิด (บังคับให้ทำตามขั้นตอน):
+1. วิเคราะห์คำถาม: ผู้ใช้ต้องการค้นหาข้อมูลอะไร หรือต้องการให้นับจำนวนอะไร?
+2. กรองข้อมูล: หาแถวในตารางด้านบนที่ตรงกับเงื่อนไข
+3. คำนวณ (ถ้ามี): นับจำนวน หรือบวกเลขอย่างระมัดระวัง
+4. สรุปคำตอบ: เขียนคำตอบที่ถูกต้องชัดเจน อ้างอิงจากข้อมูลที่มีเท่านั้น (ถ้าไม่มีข้อมูลให้ตอบว่าไม่พบข้อมูล)
+
+คำตอบสุดท้าย (อธิบายให้กระชับและตรงประเด็น ไม่ต้องอธิบายกระบวนการคิด):`;
 
             try {
                 const resultText = await fetch9armAI(prompt, false);
                 let formattedText = resultText
                     .replace(/```html|```/g, '')
-                    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                    .replace(/\*\*(.*?)\*\*/g, '<strong class="text-purple-800">$1</strong>')
                     .replace(/\*(.*?)\*/g, '<em>$1</em>')
                     .replace(/\n/g, '<br>');
                 answerBox.innerHTML = formattedText;
