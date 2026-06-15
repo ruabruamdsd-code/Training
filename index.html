@@ -56,8 +56,9 @@
 </head>
 <body class="bg-slate-50 text-slate-800">
 
-    <div class="min-h-screen p-4 md:p-6">
-        <div class="max-w-[1400px] mx-auto space-y-6 print-w-full">
+    <!-- MAIN APP VIEW -->
+    <div id="mainAppView" class="min-h-screen p-4 md:p-6 print-w-full">
+        <div class="max-w-[1400px] mx-auto space-y-6">
             
             <!-- Header Section -->
             <div class="flex flex-col xl:flex-row xl:items-center justify-between gap-4">
@@ -327,7 +328,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
         import { 
-            getFirestore, collection, onSnapshot, addDoc, updateDoc, doc, deleteDoc
+            getFirestore, collection, onSnapshot, addDoc, updateDoc, doc, deleteDoc, setDoc
         } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
         import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-auth.js";
 
@@ -346,6 +347,8 @@
         const db = getFirestore(app);
 
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        
+        // References for Main Projects Data
         const getProjectsCol = () => collection(db, 'artifacts', appId, 'public', 'data', 'projects_v2'); 
         const getProjectDoc = (pId) => doc(db, 'artifacts', appId, 'public', 'data', 'projects_v2', pId);
 
@@ -464,12 +467,14 @@
             if (isListenerInit || !currentUser) return;
             isListenerInit = true;
             
+            // Listen for Main Projects Data
             onSnapshot(getProjectsCol(), (snapshot) => {
                 appData = snapshot.docs.map(doc => ({
                     id: doc.id,
                     projectName: doc.data().projectName || 'ไม่มีชื่อโครงการ',
+                    targetTrainees: doc.data().targetTrainees || 0,
                     mainActivities: doc.data().mainActivities || [],
-                    createdAt: doc.data().createdAt || 0 // ดึงเวลาที่สร้างมาด้วย
+                    createdAt: doc.data().createdAt || 0 
                 }));
                 
                 // เรียงลำดับโครงการจากเก่าไปใหม่ (ข้อมูลที่เพิ่มล่าสุดจะไปอยู่ท้ายสุด)
@@ -490,6 +495,10 @@
                 document.getElementById('projectListContainer').innerHTML = `<div class="p-8 text-center text-red-500">ไม่สามารถเชื่อมต่อฐานข้อมูลได้: ${error.message}</div>`;
             });
         }
+
+        // ==========================================
+        // MAIN APP LOGIC 
+        // ==========================================
 
         document.getElementById('searchInput').addEventListener('input', (e) => {
             searchTerm = e.target.value.toLowerCase();
@@ -625,7 +634,10 @@
                         <div class="flex items-center gap-2 p-3 bg-blue-50 hover:bg-blue-100 rounded-lg cursor-pointer transition-colors group" onclick="toggleProject('${project.id}')">
                             <i class="fa-solid ${isPExp ? 'fa-chevron-down' : 'fa-chevron-right'} text-blue-400 w-4 no-print"></i>
                             <i class="fa-solid fa-folder-open text-xl text-blue-700 flex-shrink-0"></i>
-                            <h2 class="text-lg font-bold text-slate-800 leading-tight">${project.projectName}</h2>
+                            <h2 class="text-lg font-bold text-slate-800 leading-tight flex items-center gap-2 flex-wrap">
+                                ${project.projectName}
+                                <span class="text-xs font-medium bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full border border-blue-200 shadow-sm whitespace-nowrap">เป้าหมาย ${project.targetTrainees || 0} คน</span>
+                            </h2>
                             
                             ${isAdmin ? `
                             <div class="ml-auto flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity no-print">
@@ -650,7 +662,10 @@
                                     <div class="flex items-center gap-2 p-3 bg-emerald-50 hover:bg-emerald-100 rounded-t-lg cursor-pointer transition-colors group" onclick="toggleMainActivity('${mainAct.id}')">
                                         <i class="fa-solid ${isMExp ? 'fa-chevron-down' : 'fa-chevron-right'} text-emerald-500 w-4 no-print"></i>
                                         <i class="fa-solid fa-briefcase text-emerald-700 flex-shrink-0"></i>
-                                        <h3 class="font-semibold text-slate-800">[กิจกรรมหลัก] ${mainAct.mainActivityName}</h3>
+                                        <h3 class="font-semibold text-slate-800 flex items-center gap-2 flex-wrap">
+                                            [กิจกรรมหลัก] ${mainAct.mainActivityName}
+                                            <span class="text-[11px] font-medium bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full border border-emerald-200 shadow-sm whitespace-nowrap">เป้าหมาย ${mainAct.targetTrainees || 0} คน</span>
+                                        </h3>
                                         
                                         ${isAdmin ? `
                                         <div class="ml-auto flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity no-print">
@@ -675,7 +690,10 @@
                                                 <div class="flex items-center gap-2 p-2 px-3 bg-amber-50 hover:bg-amber-100 cursor-pointer transition-colors group" onclick="toggleSubActivity('${subAct.id}')">
                                                     <i class="fa-solid ${isSExp ? 'fa-chevron-down' : 'fa-chevron-right'} text-amber-500 w-4 text-xs no-print"></i>
                                                     <i class="fa-solid fa-list-check text-amber-600 flex-shrink-0"></i>
-                                                    <h4 class="font-medium text-slate-700 text-sm">[กิจกรรมย่อย] ${subAct.subActivityName}</h4>
+                                                    <h4 class="font-medium text-slate-700 text-sm flex items-center gap-2 flex-wrap">
+                                                        [กิจกรรมย่อย] ${subAct.subActivityName}
+                                                        <span class="text-[10px] font-medium bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full border border-amber-200 shadow-sm whitespace-nowrap">เป้าหมาย ${subAct.targetTrainees || 0} คน</span>
+                                                    </h4>
                                                     
                                                     ${isAdmin ? `
                                                     <div class="ml-auto flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity no-print">
@@ -851,25 +869,45 @@
             if (type === 'addProject' || type === 'editProject') {
                 title.innerText = type === 'addProject' ? 'เพิ่มโครงการใหม่' : 'แก้ไขโครงการ';
                 let pName = '';
-                if (type === 'editProject') pName = appData.find(x => x.id === pId)?.projectName || '';
-                mBody.innerHTML = `<div><label class="block text-sm font-medium mb-1">ชื่อโครงการ</label><input required id="inp_pName" value="${pName}" class="w-full p-2.5 border rounded-lg outline-none focus:ring-2 focus:ring-blue-600"></div>`;
+                let pTarget = '';
+                if (type === 'editProject') {
+                    const p = appData.find(x => x.id === pId);
+                    pName = p?.projectName || '';
+                    pTarget = p?.targetTrainees || '';
+                }
+                mBody.innerHTML = `
+                    <div><label class="block text-sm font-medium mb-1">ชื่อโครงการ</label><input required id="inp_pName" value="${pName}" class="w-full p-2.5 border rounded-lg outline-none focus:ring-2 focus:ring-blue-600"></div>
+                    <div class="mt-3"><label class="block text-sm font-medium mb-1">เป้าหมายจำนวนคน (โครงการ)</label><input type="number" id="inp_pTarget" value="${pTarget}" class="w-full p-2.5 border rounded-lg outline-none focus:ring-2 focus:ring-blue-600" placeholder="เช่น 60"></div>
+                `;
             } else if (type === 'addMainActivity' || type === 'editMainActivity') {
                 title.innerText = type === 'addMainActivity' ? 'เพิ่มกิจกรรมหลัก' : 'แก้ไขกิจกรรมหลัก';
                 let mName = '';
+                let mTarget = '';
                 if (type === 'editMainActivity') {
                     const p = appData.find(x => x.id === pId);
-                    mName = p.mainActivities.find(x => x.id === mId)?.mainActivityName || '';
+                    const m = p.mainActivities.find(x => x.id === mId);
+                    mName = m?.mainActivityName || '';
+                    mTarget = m?.targetTrainees || '';
                 }
-                mBody.innerHTML = `<div><label class="block text-sm font-medium mb-1">ชื่อกิจกรรมหลัก</label><input required id="inp_mName" value="${mName}" class="w-full p-2.5 border rounded-lg outline-none focus:ring-2 focus:ring-emerald-600"></div>`;
+                mBody.innerHTML = `
+                    <div><label class="block text-sm font-medium mb-1">ชื่อกิจกรรมหลัก</label><input required id="inp_mName" value="${mName}" class="w-full p-2.5 border rounded-lg outline-none focus:ring-2 focus:ring-emerald-600"></div>
+                    <div class="mt-3"><label class="block text-sm font-medium mb-1">เป้าหมายจำนวนคน (กิจกรรมหลัก)</label><input type="number" id="inp_mTarget" value="${mTarget}" class="w-full p-2.5 border rounded-lg outline-none focus:ring-2 focus:ring-emerald-600" placeholder="เช่น 60"></div>
+                `;
             } else if (type === 'addSubActivity' || type === 'editSubActivity') {
                 title.innerText = type === 'addSubActivity' ? 'เพิ่มกิจกรรมย่อย' : 'แก้ไขกิจกรรมย่อย';
                 let sName = '';
+                let sTarget = '';
                 if (type === 'editSubActivity') {
                     const p = appData.find(x => x.id === pId);
                     const m = p.mainActivities.find(x => x.id === mId);
-                    sName = m.subActivities.find(x => x.id === sId)?.subActivityName || '';
+                    const s = m.subActivities.find(x => x.id === sId);
+                    sName = s?.subActivityName || '';
+                    sTarget = s?.targetTrainees || '';
                 }
-                mBody.innerHTML = `<div><label class="block text-sm font-medium mb-1">ชื่อกิจกรรมย่อย</label><input required id="inp_sName" value="${sName}" class="w-full p-2.5 border rounded-lg outline-none focus:ring-2 focus:ring-amber-500"></div>`;
+                mBody.innerHTML = `
+                    <div><label class="block text-sm font-medium mb-1">ชื่อกิจกรรมย่อย</label><input required id="inp_sName" value="${sName}" class="w-full p-2.5 border rounded-lg outline-none focus:ring-2 focus:ring-amber-500"></div>
+                    <div class="mt-3"><label class="block text-sm font-medium mb-1">เป้าหมายจำนวนคน (กิจกรรมย่อย)</label><input type="number" id="inp_sTarget" value="${sTarget}" class="w-full p-2.5 border rounded-lg outline-none focus:ring-2 focus:ring-amber-500" placeholder="เช่น 20"></div>
+                `;
             } else if (type === 'addCourse' || type === 'editCourse') {
                 title.innerText = type === 'addCourse' ? 'เพิ่มรุ่น/หลักสูตรใหม่' : 'แก้ไขรุ่น/หลักสูตร';
                 let cData = { code: '', name: presetCourseName, quarter: '1-2', hours: '', trainees: 20, person: '', date: '', status: 'รอเปิดอบรม' };
@@ -949,18 +987,25 @@
                 if (type === 'addProject') {
                     await addDoc(getProjectsCol(), {
                         projectName: document.getElementById('inp_pName').value,
+                        targetTrainees: parseInt(document.getElementById('inp_pTarget').value) || 0,
                         mainActivities: [],
                         createdAt: Date.now() // เพิ่มเวลาที่สร้างเพื่อให้ข้อมูลไปอยู่ท้ายสุดเสมอ
                     });
                 } 
                 else if (type === 'editProject') {
                     await updateDoc(getProjectDoc(pId), {
-                        projectName: document.getElementById('inp_pName').value
+                        projectName: document.getElementById('inp_pName').value,
+                        targetTrainees: parseInt(document.getElementById('inp_pTarget').value) || 0
                     });
                 }
                 else if (type === 'addMainActivity') {
                     const proj = appData.find(x => x.id === pId);
-                    const newMAct = { id: 'M-' + Date.now(), mainActivityName: document.getElementById('inp_mName').value, subActivities: [] };
+                    const newMAct = { 
+                        id: 'M-' + Date.now(), 
+                        mainActivityName: document.getElementById('inp_mName').value, 
+                        targetTrainees: parseInt(document.getElementById('inp_mTarget').value) || 0,
+                        subActivities: [] 
+                    };
                     await updateDoc(getProjectDoc(pId), { mainActivities: [...proj.mainActivities, newMAct] });
                     expandedMainActivities.add(newMAct.id);
                 } 
@@ -969,6 +1014,7 @@
                     const mainActs = [...proj.mainActivities];
                     const mIndex = mainActs.findIndex(x => x.id === mId);
                     mainActs[mIndex].mainActivityName = document.getElementById('inp_mName').value;
+                    mainActs[mIndex].targetTrainees = parseInt(document.getElementById('inp_mTarget').value) || 0;
                     await updateDoc(getProjectDoc(pId), { mainActivities: mainActs });
                 }
                 else if (type === 'addSubActivity') {
@@ -977,7 +1023,12 @@
                     const mIndex = mainActs.findIndex(x => x.id === mId);
                     
                     if (!mainActs[mIndex].subActivities) mainActs[mIndex].subActivities = [];
-                    const newSAct = { id: 'S-' + Date.now(), subActivityName: document.getElementById('inp_sName').value, courses: [] };
+                    const newSAct = { 
+                        id: 'S-' + Date.now(), 
+                        subActivityName: document.getElementById('inp_sName').value, 
+                        targetTrainees: parseInt(document.getElementById('inp_sTarget').value) || 0,
+                        courses: [] 
+                    };
                     mainActs[mIndex].subActivities.push(newSAct);
                     
                     await updateDoc(getProjectDoc(pId), { mainActivities: mainActs });
@@ -989,6 +1040,7 @@
                     const mIndex = mainActs.findIndex(x => x.id === mId);
                     const sIndex = mainActs[mIndex].subActivities.findIndex(x => x.id === sId);
                     mainActs[mIndex].subActivities[sIndex].subActivityName = document.getElementById('inp_sName').value;
+                    mainActs[mIndex].subActivities[sIndex].targetTrainees = parseInt(document.getElementById('inp_sTarget').value) || 0;
                     await updateDoc(getProjectDoc(pId), { mainActivities: mainActs });
                 }
                 else if (type === 'addCourse') {
@@ -1108,26 +1160,29 @@
 
                     jsonData.forEach(row => {
                         const pName = row['ชื่อโครงการ'];
+                        const pTarget = parseInt(row['เป้าหมายโครงการ']) || 0;
                         const mName = row['กิจกรรมหลัก'];
+                        const mTarget = parseInt(row['เป้าหมายกิจกรรมหลัก']) || 0;
                         const sName = row['กิจกรรมย่อย'];
+                        const sTarget = parseInt(row['เป้าหมายกิจกรรมย่อย']) || 0;
                         
                         if (!pName) return; // ข้ามบรรทัดที่ไม่มีชื่อโครงการ
 
                         if (!projectsMap[pName]) {
-                            projectsMap[pName] = { projectName: pName, mainActivities: [] };
+                            projectsMap[pName] = { projectName: pName, targetTrainees: pTarget, mainActivities: [] };
                         }
                         
                         if (mName) {
                             let mainAct = projectsMap[pName].mainActivities.find(m => m.mainActivityName === mName);
                             if (!mainAct) {
-                                mainAct = { id: 'M-' + Date.now() + Math.random(), mainActivityName: mName, subActivities: [] };
+                                mainAct = { id: 'M-' + Date.now() + Math.random(), mainActivityName: mName, targetTrainees: mTarget, subActivities: [] };
                                 projectsMap[pName].mainActivities.push(mainAct);
                             }
 
                             if (sName) {
                                 let subAct = mainAct.subActivities.find(s => s.subActivityName === sName);
                                 if (!subAct) {
-                                    subAct = { id: 'S-' + Date.now() + Math.random(), subActivityName: sName, courses: [] };
+                                    subAct = { id: 'S-' + Date.now() + Math.random(), subActivityName: sName, targetTrainees: sTarget, courses: [] };
                                     mainAct.subActivities.push(subAct);
                                 }
 
@@ -1189,25 +1244,25 @@
                 right: { style: "thin", color: { auto: 1 } }
             };
 
-            const styleProject = { font: { name: 'Sarabun', sz: 14, bold: true, color: { rgb: "1E3A8A" } } };
-            const styleMain = { font: { name: 'Sarabun', sz: 12, bold: true, color: { rgb: "047857" } } };
-            const styleSub = { font: { name: 'Sarabun', sz: 12, bold: true, color: { rgb: "B45309" } } };
+            const styleProject = { font: { name: 'TH SarabunPSK', sz: 16, bold: true, color: { rgb: "1E3A8A" } } };
+            const styleMain = { font: { name: 'TH SarabunPSK', sz: 16, bold: true, color: { rgb: "047857" } } };
+            const styleSub = { font: { name: 'TH SarabunPSK', sz: 16, bold: true, color: { rgb: "B45309" } } };
             
             const styleHeader = {
-                font: { name: 'Sarabun', sz: 11, bold: true, color: { rgb: "FFFFFF" } },
+                font: { name: 'TH SarabunPSK', sz: 16, bold: true, color: { rgb: "FFFFFF" } },
                 fill: { fgColor: { rgb: "2563EB" } }, // สีพื้นหลังสีน้ำเงิน
                 alignment: { horizontal: "center", vertical: "center", wrapText: true },
                 border: borderAll
             };
 
             const styleDataCenterBase = {
-                font: { name: 'Sarabun', sz: 11 },
+                font: { name: 'TH SarabunPSK', sz: 16 },
                 alignment: { horizontal: "center", vertical: "center" },
                 border: borderAll
             };
 
             const styleDataLeftBase = {
-                font: { name: 'Sarabun', sz: 11 },
+                font: { name: 'TH SarabunPSK', sz: 16 },
                 alignment: { horizontal: "left", vertical: "center" },
                 border: borderAll
             };
@@ -1218,7 +1273,9 @@
             appData.forEach((project, pIndex) => {
                 
                 // แถวที่ 1: ชื่อโครงการ
-                aoaData.push([{ v: `${pIndex + 1}. ${project.projectName || 'ไม่มีชื่อโครงการ'}`, t: 's', s: styleProject }]);
+                let pTitle = `${pIndex + 1}. ${project.projectName || 'ไม่มีชื่อโครงการ'}`;
+                if (project.targetTrainees > 0) pTitle += ` (เป้าหมาย: ${project.targetTrainees} คน)`;
+                aoaData.push([{ v: pTitle, t: 's', s: styleProject }]);
                 rowsConfig.push({ hpt: 30 }); // ความสูงบรรทัด 30
                 
                 if (!project.mainActivities || project.mainActivities.length === 0) {
@@ -1228,14 +1285,18 @@
 
                 project.mainActivities.forEach(mainAct => {
                     // แถวที่ 2: กิจกรรมหลัก
-                    aoaData.push(["", { v: `กิจกรรมหลัก: ${mainAct.mainActivityName || ''}`, t: 's', s: styleMain }]);
+                    let mTitle = `กิจกรรมหลัก: ${mainAct.mainActivityName || ''}`;
+                    if (mainAct.targetTrainees > 0) mTitle += ` (เป้าหมาย: ${mainAct.targetTrainees} คน)`;
+                    aoaData.push(["", { v: mTitle, t: 's', s: styleMain }]);
                     rowsConfig.push({ hpt: 25 });
 
                     if (!mainAct.subActivities || mainAct.subActivities.length === 0) return;
 
                     mainAct.subActivities.forEach(subAct => {
                         // แถวที่ 3: กิจกรรมย่อย
-                        aoaData.push(["", "", { v: `กิจกรรมย่อย: ${subAct.subActivityName || ''}`, t: 's', s: styleSub }]);
+                        let sTitle = `กิจกรรมย่อย: ${subAct.subActivityName || ''}`;
+                        if (subAct.targetTrainees > 0) sTitle += ` (เป้าหมาย: ${subAct.targetTrainees} คน)`;
+                        aoaData.push(["", "", { v: sTitle, t: 's', s: styleSub }]);
                         rowsConfig.push({ hpt: 22 });
 
                         if (!subAct.courses || subAct.courses.length === 0) return;
@@ -1587,24 +1648,44 @@ ${JSON.stringify(aggregatedData, null, 2)}
             askBtn.disabled = true;
             askBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
 
-            // --- Data Structuring: แปลงข้อมูลเป็นรูปแบบตาราง (CSV) เพื่อให้ AI เข้าใจง่ายและประหยัด Token ---
-            let dataHeaders = "ชื่อโครงการ|กิจกรรมหลัก|กิจกรรมย่อย|รหัสหลักสูตร|ชื่อหลักสูตร|ไตรมาส|ชั่วโมง|คน|ผู้รับผิดชอบ|สถานะ\n";
+            // --- 1. คำนวณสรุปผลด้วย JavaScript ให้เป๊ะ 100% (Pre-calculated Summary) ---
+            let qnaSummary = {
+                totalCourses: 0,
+                totalTrainees: 0,
+                status: {},
+                quarter: {},
+                person: {}
+            };
+
+            // --- 2. เตรียมข้อมูลดิบ (Raw Data) ---
+            let dataHeaders = "ชื่อโครงการ|กิจกรรมหลัก|กิจกรรมย่อย|รหัส|ชื่อหลักสูตร|ไตรมาส|ชั่วโมง|คน|ผู้รับผิดชอบ|สถานะ\n";
             let dataRows = "";
             let count = 0;
-            const MAX_ROWS = 300; // เพิ่มเป็น 300 ได้เพราะรูปแบบ CSV ประหยัด Token มากขึ้น
+            const MAX_ROWS = 300; 
 
             appData.forEach(p => {
                 p.mainActivities.forEach(ma => {
                     (ma.subActivities || []).forEach(sa => {
                         (sa.courses || []).forEach(c => {
+                            // คำนวณสถิติ
+                            let tCount = parseInt(c.trainees) || 0;
+                            let qLabel = c.quarter || '1-2';
+                            if (qLabel === '1' || qLabel === '2') qLabel = '1-2';
+                            
+                            qnaSummary.totalCourses++;
+                            qnaSummary.totalTrainees += tCount;
+                            
+                            qnaSummary.status[c.status] = (qnaSummary.status[c.status] || 0) + 1;
+                            qnaSummary.quarter[qLabel] = (qnaSummary.quarter[qLabel] || 0) + 1;
+                            
+                            if(c.responsiblePerson) {
+                                qnaSummary.person[c.responsiblePerson] = (qnaSummary.person[c.responsiblePerson] || 0) + 1;
+                            }
+
+                            // เก็บข้อมูลดิบไม่เกิน MAX_ROWS
                             count++;
                             if (count <= MAX_ROWS) {
-                                let qLabel = c.quarter || '1-2';
-                                if (qLabel === '1' || qLabel === '2') qLabel = '1-2';
-                                
-                                // คั่นด้วย | และลบ | ออกจากชื่อเพื่อไม่ให้โครงสร้างตารางพัง
                                 const clean = (str) => (str || '-').toString().replace(/\|/g, ' ');
-                                
                                 dataRows += `${clean(p.projectName)}|${clean(ma.mainActivityName)}|${clean(sa.subActivityName)}|${clean(c.courseCode)}|${clean(c.courseName)}|Q${qLabel}|${clean(c.hours)}|${clean(c.trainees)}|${clean(c.responsiblePerson)}|${clean(c.status)}\n`;
                             }
                         });
@@ -1612,25 +1693,43 @@ ${JSON.stringify(aggregatedData, null, 2)}
                 });
             });
 
+            // หาคนรับผิดชอบมากสุด 10 อันดับแรก ใส่ใน Summary
+            let topPersonsText = Object.keys(qnaSummary.person)
+                .map(k => `${k}: ${qnaSummary.person[k]} รุ่น`)
+                .sort((a, b) => parseInt(b.split(': ')[1]) - parseInt(a.split(': ')[1]))
+                .slice(0, 10)
+                .join(', ');
+
+            let summaryString = `
+- จำนวนหลักสูตรทั้งหมด: ${qnaSummary.totalCourses} รุ่น
+- จำนวนคนฝึกอบรมทั้งหมด: ${qnaSummary.totalTrainees} คน
+- แยกตามสถานะ: ${Object.entries(qnaSummary.status).map(([k,v]) => `${k} ${v} รุ่น`).join(', ')}
+- แยกตามไตรมาส: ${Object.entries(qnaSummary.quarter).map(([k,v]) => `Q${k} ${v} รุ่น`).join(', ')}
+- ผู้รับผิดชอบ (10 อันดับแรก): ${topPersonsText}
+            `;
+
             let fullDataString = dataHeaders + dataRows;
             if (count > MAX_ROWS) {
-                fullDataString += `\n[ข้อมูลถูกตัดทอน มีอีก ${count - MAX_ROWS} รายการที่ซ่อนไว้]`;
+                fullDataString += `\n[ข้อมูลดิบถูกตัดทอน มีอีก ${count - MAX_ROWS} รายการที่ซ่อนไว้ แต่ข้อมูลสถิติรวมไว้ครบถ้วนแล้ว]`;
             }
 
-            // --- Chain-of-Thought Prompting: สั่งให้ AI คิดเป็นขั้นตอน ---
-            const prompt = `ด้านล่างคือฐานข้อมูลหลักสูตรฝึกอบรมในรูปแบบตาราง (คั่นด้วย |)
-            
+            // --- 3. ปรับ Prompt ให้ AI ฉลาดในการเลือกใช้ข้อมูล ---
+            const prompt = `ผู้ใช้มีคำถามเกี่ยวกับข้อมูลฝึกอบรม โปรดตอบคำถามโดยอิงจากข้อมูล 2 ส่วนด้านล่างนี้เท่านั้น ห้ามเดาข้อมูลตัวเลขขึ้นมาเอง
+
+ส่วนที่ 1: "ข้อมูลสถิติที่คำนวณไว้แล้วเป๊ะๆ 100%" (ใช้ตอบคำถามประเภท นับจำนวน, รวมยอด, ถามหาสถิติภาพรวม)
+${summaryString}
+
+ส่วนที่ 2: "ข้อมูลดิบรายหลักสูตรรูปแบบตารางคั่นด้วย |" (ใช้ค้นหาเมื่อผู้ใช้ถามเจาะจงชื่อหลักสูตร, กิจกรรม, หรือค้นหารายละเอียดปลีกย่อย)
 ${fullDataString}
 
 คำถามจากผู้ใช้: "${question}"
 
-กระบวนการคิด (บังคับให้ทำตามขั้นตอน):
-1. วิเคราะห์คำถาม: ผู้ใช้ต้องการค้นหาข้อมูลอะไร หรือต้องการให้นับจำนวนอะไร?
-2. กรองข้อมูล: หาแถวในตารางด้านบนที่ตรงกับเงื่อนไข
-3. คำนวณ (ถ้ามี): นับจำนวน หรือบวกเลขอย่างระมัดระวัง
-4. สรุปคำตอบ: เขียนคำตอบที่ถูกต้องชัดเจน อ้างอิงจากข้อมูลที่มีเท่านั้น (ถ้าไม่มีข้อมูลให้ตอบว่าไม่พบข้อมูล)
+กฎการตอบ:
+1. หากคำถามเป็นการถามสถิติภาพรวม จำนวนรวม ให้อ่านคำตอบจาก "ส่วนที่ 1" ตอบได้เลย (AI ไม่ต้องนับเอง)
+2. หากเป็นการถามหาข้อมูลเจาะจง ให้ค้นหาอย่างละเอียดใน "ส่วนที่ 2"
+3. ตอบกระชับ เข้าใจง่าย ตรงประเด็น
 
-คำตอบสุดท้าย (อธิบายให้กระชับและตรงประเด็น ไม่ต้องอธิบายกระบวนการคิด):`;
+คำตอบ:`;
 
             try {
                 const resultText = await fetch9armAI(prompt, false);
